@@ -1,5 +1,5 @@
 **TO DO**
-1. Build robot
-2. Write report
-3. DO CAD
+1. Do cad
+2. Build robot
+3. Write report(s)
 4. WIN ROBOCUP
