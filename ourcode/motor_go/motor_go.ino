@@ -1,7 +1,9 @@
 #include <Servo.h>
 
 Servo myservoA,myservoB;     // create servo object to control a servo
-
+int stop_speed = 1500;        // Variable to change direction of movement, 1500 = stop, 1900 = full speed foward, 1100 = full back
+int full_forward_speed = 1900;
+int full_reverse_speed = 1100;
 void setup()
 {   
   myservoA.attach(0);  // attaches the servo  to the servo object useing pin 0
@@ -9,24 +11,45 @@ void setup()
 
 }
 
+void full_reverse(int time) {
+  myservoA.writeMicroseconds(full_reverse_speed);
+  myservoB.writeMicroseconds(full_reverse_speed);
+
+  delay(time);
+}
+
+void stop(int time) {
+  myservoA.writeMicroseconds(stop_speed);
+  myservoB.writeMicroseconds(stop_speed);
+
+  delay(time);
+}
+
+void full_forward(int time) {
+  myservoA.writeMicroseconds(full_forward_speed);
+  myservoB.writeMicroseconds(full_forward_speed);
+
+  delay(time); 
+}
+
+void full_turn_left(int time) {
+  myservoA.writeMicroseconds(full_reverse_speed);
+  myservoB.writeMicroseconds(full_forward_speed);
+  delay(time);
+}
+
+void full_turn_right(int time) {
+  myservoA.writeMicroseconds(full_forward_speed);
+  myservoB.writeMicroseconds(full_reverse_speed);
+  delay(time);  
+}
+
 void loop() 
 { 
-  myservoA.writeMicroseconds(1100);      // sets the servo position full speed backward
-  myservoB.writeMicroseconds(1100);      // sets the servo position full speed backward
-
-  delay(1500);                           // waits for the servo to get there 
-  
-  // myservoA.writeMicroseconds(1500);      // sets the servo stop
-  // myservoB.writeMicroseconds(1500);      // sets the servo stop
-  // delay(1500);                           // waits for the servo to get there 
-
-
-  //myservoA.writeMicroseconds(1900);      // sets the servo position full speed forward
-  //myservoB.writeMicroseconds(1900);      // sets the servo position full speed forward
-
-  delay(1500);                           // waits for the servo to get there 
-
-  // myservoA.writeMicroseconds(1500);      // sets the servo stop
-  // myservoB.writeMicroseconds(1500);      // sets the servo stop
-  // delay(1500);                           // waits for the servo to get there 
+int time = 1000;
+stop(time);
+full_forward(time);
+full_reverse(time);
+full_turn_left(2* time);
+full_turn_right(time);
 } 
