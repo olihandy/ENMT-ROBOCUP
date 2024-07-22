@@ -6,8 +6,8 @@ int full_forward_speed = 1900;
 int full_reverse_speed = 1100;
 void setup()
 {   
-  myservoA.attach(0);  // attaches the servo  to the servo object useing pin 0
-  myservoB.attach(1);  // attaches the servo  to the servo object useing pin 1
+  myservoA.attach(2);  // attaches the servo  to the servo object useing pin 0
+  myservoB.attach(2);  // attaches the servo  to the servo object useing pin 1
 
 }
 
@@ -46,8 +46,7 @@ void full_turn_right(int time) {
 
 void loop() 
 { 
-int time = 1000;
-stop(time);
+int time = 10;
 full_forward(time);
 full_reverse(time);
 full_turn_left(2* time);

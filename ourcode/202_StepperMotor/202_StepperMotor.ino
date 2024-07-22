@@ -1,6 +1,6 @@
 
-int MAdirpin = 32;
-int MAsteppin = 33;
+int MAdirpin = 7;
+int MAsteppin = 8;
 int MBdirpin = 30;
 int MBsteppin = 31;
 
@@ -26,10 +26,10 @@ void loop()
 
     digitalWrite(MAsteppin,LOW);
     digitalWrite(MBsteppin,LOW);
-    delayMicroseconds(20);
+    delayMicroseconds(9);
     digitalWrite(MAsteppin,HIGH);
     digitalWrite(MBsteppin,HIGH);
-    delay(1);
+    delayMicroseconds(9);
   }
   digitalWrite(MAdirpin,HIGH);
   digitalWrite(MBdirpin,HIGH);
