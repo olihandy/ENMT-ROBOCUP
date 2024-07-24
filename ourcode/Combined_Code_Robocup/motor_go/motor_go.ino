@@ -78,7 +78,7 @@ void full_turn_right(int time) {
   delay(time);  
 }
 
-void A_read(void) {
+long A_read(void) {
   digitalWrite(AtrigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(AtrigPin, LOW);
@@ -86,7 +86,7 @@ void A_read(void) {
 
 }
 
-void B_read(void) {
+long B_read(void) {
   digitalWrite(BtrigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(BtrigPin, LOW);
@@ -100,23 +100,9 @@ long microsecondsToCentimeters(long microseconds)
 
 void loop() 
 { 
+  long duration_A = A_read();
+  long duration_B = B_read();
 
- 
-  // The sensor is triggered by a HIGH pulse of 10 or more microseconds.
-  // Give a short LOW pulse beforehand to ensure a clean HIGH pulse:
-
-
- 
-  // Read the signal from the sensor: a HIGH pulse whose
-  // duration is the time (in microseconds) from the sending
-  // of the ping to the reception of its echo off of an object.
-
-  A_read();
-  B_read();
-
-  
- 
-  // convert the time into a distance
   Acm = microsecondsToCentimeters(durationA);
   Bcm = microsecondsToCentimeters(durationB);
 
@@ -133,7 +119,8 @@ void loop()
   } else if (Acm > 20 && Bcm > 20) {
     full_forward(time);
   } else {
-    stop();
+    stop(time);
+    
     //If robot is against a wall where does it go? The following is future code for later
     //int directionCheckarray[20] = {0}; //An array of distances as the robot rotates when it detects a wall
     //int8_t it_num = 0;
