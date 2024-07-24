@@ -100,8 +100,8 @@ long microsecondsToCentimeters(long microseconds)
 
 void loop() 
 { 
-  long duration_A = A_read();
-  long duration_B = B_read();
+A_read();
+B_read();
 
   Acm = microsecondsToCentimeters(durationA);
   Bcm = microsecondsToCentimeters(durationB);
