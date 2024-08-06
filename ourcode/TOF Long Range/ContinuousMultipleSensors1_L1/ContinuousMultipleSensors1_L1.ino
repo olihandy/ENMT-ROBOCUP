@@ -18,7 +18,7 @@ const byte SX1509_ADDRESS = 0x3F;
 
 
 // The number of sensors in your system.
-const uint8_t sensorCount = 1;
+const uint8_t sensorCount = 2;
 
 // The Arduino pin connected to the XSHUT pin of each sensor.
 const uint8_t xshutPins[8] = {0,1,2,3,4,5,6,7};
