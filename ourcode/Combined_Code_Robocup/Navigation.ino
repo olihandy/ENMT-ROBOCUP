@@ -5,16 +5,14 @@
 const byte SX1509_ADDRESS = 0x3F;
 #define VL53L1X_ADDRESS_START 0x30
 
-
 // The number of sensors in your system.
-const uint8_t sensorCount = 1;
+const uint8_t sensorCount = 2;  //sensorcount, 2 L1s
 
 // The Arduino pin connected to the XSHUT pin of each sensor.
-const uint8_t xshutPins[8] = {0,1,2,3,4,5,6,7};
+const uint8_t xshutPins[sensorCount] = {3, 4};  //Only two needed for two sensors, xshut ports
 
 SX1509 io; // Create an SX1509 object to be used throughout
 VL53L1X sensors[sensorCount];
-
 
 
 #include <stdio.h> //Motor setup
@@ -36,13 +34,12 @@ const int AechoPin = 2;
 const int BtrigPin = 5;
 const int BechoPin = 4;
 
-int time = 10; //time in milliseconds
-static long durationA,durationB, Acm,Bcm;
+int timedelay = 10; //time in milliseconds
+static long durationA, durationB, Acm,Bcm;
 
 
 
 //IMU setup
-
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
@@ -76,8 +73,8 @@ uint16_t BNO055_SAMPLERATE_DELAY_MS = 100;
 
 // Check I2C device address and correct line below (by default address is 0x29 or 0x28)
 //                                   id, address
-Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
-
+// Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28); //searches to find IMU
+Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire1);
 
 //Color Sensor setup
 #include <Adafruit_TCS34725.h>
@@ -85,128 +82,26 @@ Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
 
 
-//TOF setup
-#include <VL53L1X.h>
-#include <SparkFunSX1509.h>
 
-const byte SX1509_ADDRESS = 0x3F;
-#define VL53L1X_ADDRESS_START 0x30
-
-// The number of sensors in your system.
-const uint8_t sensorCount = 1;
-
-// The Arduino pin connected to the XSHUT pin of each sensor.
-const uint8_t xshutPins[8] = {0,1,2,3,4,5,6,7};
-
-SX1509 io; // Create an SX1509 object to be used throughout
-VL53L1X sensors[sensorCount];
 
  
-void setup()
-{   
-  myservoA.attach(0);  // attaches the servo  to the servo object useing pin 0
-  myservoB.attach(1);  // attaches the servo  to the servo object useing pin 1
+void setup() //Need one setup function
+{ 
+  //TOF
+  // while (!Serial) {}    NO USB 
+  // Serial.begin(115200);
 
-  pinMode(AtrigPin, OUTPUT);            //Setup ultrasound pins
-  pinMode(AechoPin, INPUT);
-
-  pinMode(BtrigPin, OUTPUT);            //Setup ultrasound pins
-  pinMode(BechoPin, INPUT);
-  
-  Serial.begin(9600);                  // initialize serial communication:
-  
-  digitalWrite(AtrigPin, LOW);
-  delayMicroseconds(2);
-
-  digitalWrite(BtrigPin, LOW);
-  delayMicroseconds(2);
-
-}
-
-void full_reverse(int time) {
-  myservoA.writeMicroseconds(full_reverse_speed);
-  myservoB.writeMicroseconds(full_reverse_speed);
-
-  delay(time);
-}
-
-void stop(int time) {
-  myservoA.writeMicroseconds(stop_speed);
-  myservoB.writeMicroseconds(stop_speed);
-
-  delay(time);
-}
-
-void full_forward(int time) {
-  myservoA.writeMicroseconds(full_forward_speed);
-  myservoB.writeMicroseconds(full_forward_speed);
-
-  delay(time); 
-}
-
-void full_turn_left(int time) {
-  myservoA.writeMicroseconds(full_reverse_speed);
-  myservoB.writeMicroseconds(full_forward_speed);
-  delay(time);
-}
-
-void directioncheck_left(int time) {
-  myservoA.writeMicroseconds(full_reverse_speed);
-  myservoB.writeMicroseconds(full_forward_speed);
-  delay(time*3); //Will be replaced by IMU code
-
-}
-
-void full_turn_right(int time) {
-  myservoA.writeMicroseconds(full_forward_speed);
-  myservoB.writeMicroseconds(full_reverse_speed);
-  delay(time);  
-}
-
-long A_read(void) {
-  digitalWrite(AtrigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(AtrigPin, LOW);
-  durationA = pulseIn(AechoPin, HIGH);
-
-}
-
-long B_read(void) {
-  digitalWrite(BtrigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(BtrigPin, LOW);
-  durationB = pulseIn(BechoPin, HIGH);
-}
-
-//int colorRead() {
-
-//}
-
-void IMUsetup(void)
-{
-  Serial.begin(115200);
-  Serial.println("Orientation Sensor Test"); Serial.println("");
-
-  /* Initialise the sensor */
-  if (!bno.begin())
-  {
-    /* There was a problem detecting the BNO055 ... check your connections */
-    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    while (1);
+  if(!io.begin(SX1509_ADDRESS)){
+    Serial.println("Failed to to talk to IO Expander for TOFs");
+    while(1) {};
   }
-
-  delay(1000);
-}
-
-void TOFL1setup()
-{
-  while (!Serial) {}
-  Serial.begin(115200);
-
-  io.begin(SX1509_ADDRESS);
 
   Wire.begin();
   Wire.setClock(400000); // use 400 kHz I2C
+  Wire1.begin();
+  Wire1.setClock(400000); // use 400 kHz I2C
+
+  Serial.println("Setup Wires");
 
   // Disable/reset all sensors by driving their XSHUT pins low.
   for (uint8_t i = 0; i < sensorCount; i++)
@@ -232,6 +127,7 @@ void TOFL1setup()
     {
       Serial.print("Failed to detect and initialize sensor ");
       Serial.println(i);
+
       while (1);
     }
 
@@ -242,55 +138,117 @@ void TOFL1setup()
 
     sensors[i].startContinuous(50);
   }
+
+  Serial.println("Configured TOFs");
+
+  //Motor
+  myservoA.attach(0);  // attaches the servo  to the servo object using pin 0
+  myservoB.attach(1);  // attaches the servo  to the servo object using pin 1
+
+  Serial.println("Configured Motors");
+
+  //Ultrasound
+  pinMode(AtrigPin, OUTPUT);            //Setup ultrasound pins
+  pinMode(AechoPin, INPUT);
+
+  pinMode(BtrigPin, OUTPUT);            //Setup ultrasound pins
+  pinMode(BechoPin, INPUT);
+  
+  digitalWrite(AtrigPin, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(BtrigPin, LOW);
+  delayMicroseconds(2);
+
+  Serial.println("Configured Ultrasonics");
+
+  //IMU
+  Serial.println("Orientation Sensor Test"); Serial.println("");
+
+  /* Initialise the sensor */
+  if (!bno.begin())
+  {
+    /* There was a problem detecting the BNO055 ... check your connections */
+    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    while (1);
+  }
+  Serial.print("IMU detected");
+  delay(1000);
 }
 
+void full_reverse(int timedelay) {
+  myservoA.writeMicroseconds(full_reverse_speed);
+  myservoB.writeMicroseconds(full_reverse_speed);
 
+  delay(timedelay);
+}
 
-void IMUprintEvent(sensors_event_t* event) {
+void stop(int timedelay) {
+  myservoA.writeMicroseconds(stop_speed);
+  myservoB.writeMicroseconds(stop_speed);
+
+  delay(timedelay);
+}
+
+void full_forward(int timedelay) {
+  myservoA.writeMicroseconds(full_forward_speed);
+  myservoB.writeMicroseconds(full_forward_speed);
+
+  delay(timedelay); 
+}
+
+void full_turn_left(int timedelay) {
+  myservoA.writeMicroseconds(full_reverse_speed);
+  myservoB.writeMicroseconds(full_forward_speed);
+  delay(timedelay);
+}
+
+void directioncheck_left(int timedelay) {
+  myservoA.writeMicroseconds(full_reverse_speed);
+  myservoB.writeMicroseconds(full_forward_speed);
+  delay(timedelay*3); //Will be replaced by IMU code
+
+}
+
+void full_turn_right(int timedelay) {
+  myservoA.writeMicroseconds(full_forward_speed);
+  myservoB.writeMicroseconds(full_reverse_speed);
+  delay(timedelay);  
+}
+
+long A_read(void) {
+  digitalWrite(AtrigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(AtrigPin, LOW);
+  durationA = pulseIn(AechoPin, HIGH);
+  return durationA;
+}
+
+long B_read(void) {
+  digitalWrite(BtrigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(BtrigPin, LOW);
+  durationB = pulseIn(BechoPin, HIGH);
+  return durationB;
+}
+
+//int colorRead() {
+
+//}
+
+double printEvent(sensors_event_t* event) {
   double x = -1000000, y = -1000000 , z = -1000000; //dumb values, easy to spot problem
-  if (event->type == SENSOR_TYPE_ACCELEROMETER) {
-    Serial.print("Accl:");
-    x = event->acceleration.x;
-    y = event->acceleration.y;
-    z = event->acceleration.z;
-  }
-  else if (event->type == SENSOR_TYPE_ORIENTATION) {
+  if (event->type == SENSOR_TYPE_ORIENTATION) {
     Serial.print("Orient:");
     x = event->orientation.x;
     y = event->orientation.y;
     z = event->orientation.z;
-  }
-  else if (event->type == SENSOR_TYPE_MAGNETIC_FIELD) {
-    Serial.print("Mag:");
-    x = event->magnetic.x;
-    y = event->magnetic.y;
-    z = event->magnetic.z;
-  }
-  else if (event->type == SENSOR_TYPE_GYROSCOPE) {
-    Serial.print("Gyro:");
-    x = event->gyro.x;
-    y = event->gyro.y;
-    z = event->gyro.z;
-  }
-  else if (event->type == SENSOR_TYPE_ROTATION_VECTOR) {
-    Serial.print("Rot:");
-    x = event->gyro.x;
-    y = event->gyro.y;
-    z = event->gyro.z;
-  }
-  else if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
+  } else if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
     Serial.print("Linear:");
     x = event->acceleration.x;
     y = event->acceleration.y;
     z = event->acceleration.z;
-  }
-  else if (event->type == SENSOR_TYPE_GRAVITY) {
-    Serial.print("Gravity:");
-    x = event->acceleration.x;
-    y = event->acceleration.y;
-    z = event->acceleration.z;
-  }
-  else {
+  } else {
     Serial.print("Unk:");
   }
 
@@ -300,6 +258,9 @@ void IMUprintEvent(sensors_event_t* event) {
   Serial.print(y);
   Serial.print(" |\tz= ");
   Serial.println(z);
+  Serial.print("\n");
+  double XYZList[3] = {x, y, z};
+  return *XYZList;
 }
 
 long microsecondsToCentimeters(long microseconds)
@@ -307,22 +268,25 @@ long microsecondsToCentimeters(long microseconds)
   return microseconds / 29 / 2;
 } 
 
-int IMUGetPos(void) {
-  //could add VECTOR_ACCELEROMETER, VECTOR_MAGNETOMETER,VECTOR_GRAVITY...
-  sensors_event_t orientationData , angVelocityData , linearAccelData, magnetometerData, accelerometerData, gravityData;
-  bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER); //degrees
-  bno.getEvent(&angVelocityData, Adafruit_BNO055::VECTOR_GYROSCOPE); //rad/s
-  bno.getEvent(&linearAccelData, Adafruit_BNO055::VECTOR_LINEARACCEL); //m/s^2
-  bno.getEvent(&magnetometerData, Adafruit_BNO055::VECTOR_MAGNETOMETER); 
-  bno.getEvent(&accelerometerData, Adafruit_BNO055::VECTOR_ACCELEROMETER); //Gravity detected
-  bno.getEvent(&gravityData, Adafruit_BNO055::VECTOR_GRAVITY); //Gravity preset
+sensors_event_t orientationData , accelerometerData; //, angVelocityData , linearAccelData, magnetometerData,  gravityData;
+double ori[3] = {};
+double acc[3] = {};
 
-  printEvent(&orientationData);
-  printEvent(&angVelocityData);
-  printEvent(&linearAccelData);
-  printEvent(&magnetometerData);
-  printEvent(&accelerometerData);
-  printEvent(&gravityData);
+void IMUGetPos(void) {
+  //could add VECTOR_ACCELEROMETER, VECTOR_MAGNETOMETER,VECTOR_GRAVITY...
+  bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER); //degrees
+  //bno.getEvent(&angVelocityData, Adafruit_BNO055::VECTOR_GYROSCOPE); //rad/s
+  //bno.getEvent(&linearAccelData, Adafruit_BNO055::VECTOR_LINEARACCEL); //m/s^2
+  //bno.getEvent(&magnetometerData, Adafruit_BNO055::VECTOR_MAGNETOMETER); 
+  bno.getEvent(&accelerometerData, Adafruit_BNO055::VECTOR_ACCELEROMETER); //Gravity detected
+  //bno.getEvent(&gravityData, Adafruit_BNO055::VECTOR_GRAVITY); //Gravity preset
+
+  *ori = printEvent(&orientationData);
+  //printEvent(&angVelocityData);
+  //printEvent(&linearAccelData);
+  //printEvent(&magnetometerData);
+  *acc = printEvent(&accelerometerData);
+  //printEvent(&gravityData);
 
   int8_t boardTemp = bno.getTemp();
   Serial.println();
@@ -343,18 +307,15 @@ int IMUGetPos(void) {
 
   Serial.println("--");
 
-  //return [&orientationData, &angVelocityData, &linearAccelData, &magnetometerData, &accelerometerData, &gravityData]
   //delay(BNO055_SAMPLERATE_DELAY_MS);
 }
 
+//Can't call functions globally
 //InitColorReading = 
-IMUSetup();
-//TOFL1Setup();
-//InitpositionX = SENSOR_TYPE_ACCELEROMETER->orientation.x
 int CurrentposX = 0;
 int CurrentposY = 0;
-int* Xposlist[50] = {0};
-int* Yposlist[50] = {0};
+int Xposlist[50] = {0};
+int Yposlist[50] = {0};
 int AverageAccelerationX = 0;
 int AverageAccelerationY = 0;
 //int CurrentposZ = 0;
@@ -368,18 +329,16 @@ int prevtime = 0;
 //int CurrentOrienY;
 int CurrentOrienZ = 0;
 int AverageOrienZ = 0;
-int* OrienZList[50] = {0};
+int OrienZlist[50] = {0};
 
-clock_t start_time, end_time;
-double elapsed_time;
+double elapsed_time = 0;
 const double two_minutes_in_seconds = 120.0;
 // Record the start time
-start_time = clock();
 int8_t programState = 0; //0 is moving around, no weight detected, 1 is wall is detected, 2 is weight detected, 3 is returning back home
 
 void loop() 
 { 
-  time_elapsed = clock()-start_time; //Could make an interrupt for the clock
+  elapsed_time = millis()/1000; //Seconds since program has been running
   //Getting current acceleration and therefore position:
   //CurrentOrienX = SENSOR_TYPE_ACCELEROMETER->orientation.x
   //CurrentOrienY = SENSOR_TYPE_ACCELEROMETER->orientation.y
@@ -387,78 +346,97 @@ void loop()
   //Have weighted average of IMU and Encoder
     
     
-  for (element=1; element<49; element++){                 //shifting the window of detected accelerations for X
+  for (uint16_t element=1; element<49; element++){                 //shifting the window of detected accelerations for X
     if (element == 48) {
       Xposlist[element] = 0;
     } else {
       Xposlist[element+1] = Xposlist[element+1];
     }
   }
-  Xposlist[0]=SENSOR_TYPE_LINEAR_ACCELERATION->acceleration.x;
-  for (averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect x accelerations
+  IMUGetPos();
+  Xposlist[0] = acc[0];
+  for (uint16_t averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect x accelerations
     AverageAccelerationX += Xposlist[averagingelement];
     AverageAccelerationX = AverageAccelerationX / 50;
   }
 
-  for (element = 1; element < 49; element++) {  //shifting the window of detected accelerations for Y
+  for (uint16_t element = 1; element < 49; element++) {  //shifting the window of detected accelerations for Y
     if (element == 48) {
       Yposlist[element] = 0;
     } else {
       Yposlist[element + 1] = Yposlist[element + 1];
     }
   }
-  Yposlist[0] = SENSOR_TYPE_LINEAR_ACCELERATION->acceleration.y;
-  for (averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect y accelerations
+  Yposlist[0] = acc[1];
+  for (uint16_t averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect y accelerations
     AverageAccelerationY += Yposlist[averagingelement];
     AverageAccelerationY = AverageAccelerationY / 50;
   }
 
-  for (element = 1; element < 49; element++) {  //shifting the window of detected accelerations for Z orientations
+  for (uint16_t element = 1; element < 49; element++) {  //shifting the window of detected accelerations for Z orientations
     if (element == 48) {
       OrienZlist[element] = 0;
     } else {
       OrienZlist[element + 1] = OrienZlist[element + 1];
     }
   }
-  OrienZlist[0] = SENSOR_TYPE_ORIENTATION->orientation.z;
-  for (averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect Z orientations
+  OrienZlist[0] = ori[2];
+  for (uint16_t averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect Z orientations
     AverageOrienZ += OrienZlist[averagingelement];
     AverageOrienZ = AverageOrienZ / 50;
   }
 
-  Timedif = clock() - prevtime;
+  int Timedif = millis()/1000 - prevtime;
   Serial.print(Timedif);
-  prevtime = clock();  //Time difference for integration
+  prevtime = millis()/1000;  //Time difference for integration
 
-  CurrentposX += AverageAccelerationX * (Timedif * 50) * *2;  //Getting the x position from moving average filter
+  CurrentposX += (AverageAccelerationX * pow(Timedif * 50, 2));  //Getting the x position from moving average filter, need pow function in Arduino for powers
   Serial.print("X: ");
   Serial.print(CurrentposX);
-  CurrentposY += AverageAccelerationY * (Timedif * 50) * *2;  //y
+  CurrentposY += (AverageAccelerationY * pow(Timedif * 50, 2));  //y
   Serial.print("Y: ");
   Serial.print(CurrentposY);
   CurrentOrienZ = AverageOrienZ;  //orientation in Z
-  Serial.print("OrienZ: ");
+  Serial.print("  OrienZ: ");
   Serial.print(AverageOrienZ);
+  Serial.print("\n");
 
-  if (time_elapsed < 100) {
+  if (elapsed_time < 100) {
     if (programState == 0) {
-      full_forward(time); //can go full forward
-      //Looks for walls with ultrasonic sensor, NEED TO MAKE ISR for these
-      A_read();
-      B_read();
+      Serial.print("State 0\n");
+      full_forward(timedelay); //can go full forward
 
-      Acm = microsecondsToCentimeters(durationA);
-      Bcm = microsecondsToCentimeters(durationB);
-
-      Serial.print(Acm);
-      Serial.print(" ");
-      Serial.print(Bcm);
+      //Looks for walls with TOF
+      for (uint8_t i = 0; i < sensorCount; i++)
+      {
+        Serial.print(sensors[i].read());
+        if (sensors[i].timeoutOccurred()) { Serial.print(" TIMEOUT"); }
+          Serial.print('\t');
+        }
       Serial.println();
+
+      uint16_t Acm = sensors[0].read()/10;  //Long range TOF reads
+      uint16_t Bcm = sensors[1].read()/10;
+
+
+      //Looks for walls with ultrasonic sensor, NEED TO MAKE ISR for these
+      //A_read();
+      //B_read();
+
+      //Acm = microsecondsToCentimeters(durationA);
+      //Bcm = microsecondsToCentimeters(durationB);
+
+
+
+      //Serial.print(Acm);
+      //Serial.print(" ");
+      //Serial.print(Bcm);
+      //Serial.println();
 
 
       //to Avoid Objects:
       //if(Acm > 3300 || Bcm > 3300 ) {
-        //full_forward(time);
+        //full_forward(timedelay);
       if (Acm<20 || Bcm<20) {
         programState = 1;
       }
@@ -466,17 +444,18 @@ void loop()
     
 
     else if (programState == 1) {
+      Serial.print("State 0\n");
       if (Acm < 20 && Bcm > 20) {
-        full_turn_left(time);
+        full_turn_left(timedelay);
       } else if(Acm > 20 && Bcm < 20) {
-        full_turn_right(time);
+        full_turn_right(timedelay);
       } else if (Acm > 20 && Bcm > 20) {
         programState = 0;
       //} else if (Weightdetected) {
         //programState = 2;
       } else {
-        stop(time);
-
+        stop(timedelay);
+        //If TOFs on side both have objects and ones on front have object in front, then it rorates 180 degrees and heads out 
 
 
 
@@ -486,7 +465,7 @@ void loop()
         //int32_t MaxCM = 0;
         //int8_t MaxCMElement = 0;
         //if (Acm>Bcm) {
-          //full_turn_left(time);
+          //full_turn_left(timedelay);
           //Get IMU heading
           //if IMU heading is less than 360 degrees
             //A_read();
@@ -497,12 +476,12 @@ void loop()
               //MaxCMElement = Acm;
             //}
             //it_num++;
-            //full_turn_left(time);
+            //full_turn_left(timedelay);
           //for (i=0; i<(it_num-MaxCMElement), i++){
-            //full_turn_right(time);
+            //full_turn_right(timedelay);
           //}
         //} else {
-          //full_turn_right(time);
+          //full_turn_right(timedelay);
         //}
         //programState = 0;
       programState = 0;
@@ -519,8 +498,18 @@ void loop()
   } else {
     //In the state to find the home base
     programState = 3;
-    Serial.print("Must find home base");
+    Serial.print("Must find home base\n");
   }
   //PrevPositionX = CurrentposX;
   //PrevOrienZ = CurrentOrienZ;
 } 
+
+
+
+
+//sensors_event_t orientationData;
+//bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER);
+//or_x = orientationData->orientation.x
+//or_y = orientationData->orientation.y
+//or_z = orientationData->orientation.z
+
