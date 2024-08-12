@@ -1,3 +1,22 @@
+//Setup of LEDs
+// int State01LEDpin = 
+// int State2LEDpin = 
+// int State3LEDpin = 
+
+// int LeftorRightProximityPin = 
+// int LowerTOFWeightDetection = 
+// int IMUDetection = 
+
+// int TOFOnPin = 
+// int InductionOnPin = 
+// int ColorOnPin = 
+
+// int MotorsNeededPin =
+// int ElectroMagnetNeededPin = 
+// int StepperNeededPin = 
+
+
+
 #include <Wire.h> //TOF Setup
 #include <VL53L1X.h>
 #include <SparkFunSX1509.h>
@@ -87,8 +106,40 @@ Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS3472
  
 void setup() //Need one setup function
 { 
+  //LEDs
+  // pinMode(State01LEDpin,OUTPUT);
+  //digitalWrite(State01LEDpin,LOW);
+  // pinMode(State2LEDpin,OUTPUT);
+  //digitalWrite(State2LEDpin,LOW);
+  // pinMode(State3LEDpin,OUTPUT);
+  //digitalWrite(State3LEDpin,LOW);
+
+  // pinMode(LeftorRightProximityPin,OUTPUT);
+  //digitalWrite(LeftorRightProximityPin,LOW);
+  // pinMode(LowerTOFWeightDetection,OUTPUT);
+  //digitalWrite(LowerTOFWeightDetection,LOW);
+  // pinMode(IMUDetection,OUTPUT);
+  //digitalWrite(IMUDetection,LOW);
+
+  // pinMode(TOFOnPin,OUTPUT);
+  //digitalWrite(TOFOnPin,LOW);
+  // pinMode(InductionOnPin,OUTPUT);
+  //digitalWrite(InductionOnPin,LOW);
+  // pinMode(ColorOnPin,OUTPUT);
+  //digitalWrite(ColorOnPin,LOW);
+
+  // pinMode(MotorsNeededPin,OUTPUT);
+  //digitalWrite(MotorsNeededPin,LOW);
+  // pinMode(ElectroMagnetNeededPin,OUTPUT);
+  //digitalWrite(ElectroMagnetNeededPin,LOW);
+  // pinMode(StepperNeededPin,OUTPUT);
+  //digitalWrite(StepperNeededPin,LOW);
+
+  //Color sensor
+  //digitalWrite(ColorOnPin,HIGH);
+  
   //TOF
-  // while (!Serial) {}    NO USB 
+  // while (!Serial) {}    NO USB FOR RUNNING CODE
   // Serial.begin(115200);
 
   if(!io.begin(SX1509_ADDRESS)){
@@ -140,6 +191,7 @@ void setup() //Need one setup function
   }
 
   Serial.println("Configured TOFs");
+  //digitalWrite(TOFOnPin,HIGH);
 
   //Motor
   myservoA.attach(0);  // attaches the servo  to the servo object using pin 0
@@ -174,6 +226,10 @@ void setup() //Need one setup function
   }
   Serial.print("IMU detected");
   delay(1000);
+
+
+  //Inductive sensor
+  //digitalWrite(InductionOnPin,HIGH);
 }
 
 void full_reverse(int timedelay) {
@@ -403,6 +459,9 @@ void loop()
 
   if (elapsed_time < 100) {
     if (programState == 0) {
+      //digitalWrite(State2LEDpin,LOW);
+      //digitalWrite(State3LEDpin,LOW);
+      //digitalWrite(State01LEDpin,HIGH);
       Serial.print("State 0\n");
       full_forward(timedelay); //can go full forward
 
@@ -440,10 +499,7 @@ void loop()
       if (Acm<20 || Bcm<20) {
         programState = 1;
       }
-    }
-    
-
-    else if (programState == 1) {
+    } else if (programState == 1) {
       Serial.print("State 0\n");
       if (Acm < 20 && Bcm > 20) {
         full_turn_left(timedelay);
@@ -485,24 +541,26 @@ void loop()
         //}
         //programState = 0;
       programState = 0;
-    } //else if (programState == 2) {
-
-    //}
-  }
-
-
-    //Detecting weights using lower TOF:
-    //If an object is found closer than the ultrasonic distance, it is an interrupt with a higher proiority than the turning process, will stop rotating and go forward at full power, then leaves the interruyptr
-
-
+      //Detecting weights using lower TOF:
+      //If an object is found closer than the ultrasonic distance, it is an interrupt with a higher proiority than the turning process, will stop rotating and go forward at full power, then leaves the interruyptr
+      } //else if (programState == 2) {
+        //going to and picking up weights. ISR may not be needed due to TOF angular range
+        //digitalWrite(State01LEDpin,LOW);
+        //digitalWrite(State3LEDpin,LOW);
+        //digitalWrite(State2LEDpin,HIGH);
+      //}
+    }
   } else {
     //In the state to find the home base
     programState = 3;
-    Serial.print("Must find home base\n");
+    //digitalWrite(State2LEDpin,LOW);
+    //digitalWrite(State01LEDpin,LOW);
+    //digitalWrite(State3LEDpin,HIGH);
+    Serial.print("Must find home base\n");+
   }
   //PrevPositionX = CurrentposX;
   //PrevOrienZ = CurrentOrienZ;
-} 
+}
 
 
 
