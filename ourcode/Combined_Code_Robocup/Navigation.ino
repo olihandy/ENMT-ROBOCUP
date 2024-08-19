@@ -1,9 +1,20 @@
-//Can't call functions globally, Global variable are set up here
-//InitColorReading = 
+#include <Wire.h>  
+#include <VL53L1X.h>
+#include <VL53L0X.h>
+#include <SparkFunSX1509.h>
+#include <stdio.h>  
+#include <time.h>
+#include <Servo.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <utility/imumaths.h>
+
+//Can't call functions globally, Global variables are set up here
+//InitColorReading =
 int CurrentposX = 0;
 int CurrentposY = 0;
-int Xposlist[50] = {0};
-int Yposlist[50] = {0};
+int Xposlist[50] = { 0 };
+int Yposlist[50] = { 0 };
 int AverageAccelerationX = 0;
 int AverageAccelerationY = 0;
 //int CurrentposZ = 0;
@@ -17,47 +28,50 @@ int prevtime = 0;
 //int CurrentOrienY;
 int CurrentOrienZ = 0;
 int AverageOrienZ = 0;
-int OrienZlist[50] = {0};
+int OrienZlist[50] = { 0 };
 
+const int ElectroMagnet1Pin = A12; //Electromagnet pins
+const int ElectroMagnet2Pin = A0;
+const int ElectroMagnet3Pin = A10;
+
+//This means the pins, not entire ports which the cables connect to
+const int InductionPin = 26; //Induction sensor pin to check
 
 double elapsed_time = 0;
 const double two_minutes_in_seconds = 120.0;
 // Record the start time
-int8_t programState = 0; //0 is moving around, no weight detected, 1 is wall is detected, 2 is weight detected, 3 is returning back home
+int8_t programState = 0;  //0 is moving around, no weight detected, 1 is wall is detected, 2 is weight detected, 3 is returning back home
 
 
 //Setup of LEDs
 
-const int LED1 = 6; //Green on top set
-const int LED2 = 18; //Yellow
-const int LED3 = 19; //Red
-const int LED4 = 9; //Green on bottom set
+const int LED1 = 4;  //Green on top set
+const int LED2 = 3;  //Yellow
+const int LED3 = 2;  //Red
+const int LED4 = 5;  //Green on bottom set
 
 
-
-#include <Wire.h> //TOF Setup
-#include <VL53L1X.h>
-#include <SparkFunSX1509.h>
-
+//TOF Setup
 const byte SX1509_ADDRESS = 0x3F;
-#define VL53L1X_ADDRESS_START 0x30
+#define VL53L0X_ADDRESS_START 0x30
+#define VL53L1X_ADDRESS_START 0x35
 
 // The number of sensors in your system.
-const uint8_t sensorCount = 2;  //sensorcount, 2 L1s
+const uint8_t sensorCountL0 = 2;  //sensorcount, 2 L1s, 2 l0s
+const uint8_t sensorCountL1 = 2;  //sensorcount, 2 L1s, 2 l0s
 
 // The Arduino pin connected to the XSHUT pin of each sensor.
-const uint8_t xshutPins[8] = {0,1,2,3,4,5,6,7};  //Only two needed for two sensors, xshut ports
+const uint8_t xshutPinsL1[sensorCountL1] = {0, 1};  //Only two needed for two sensors, xshut ports
+const uint8_t xshutPinsL0[sensorCountL0] = {4, 7};  //Only two needed for two sensors, xshut ports
 
-SX1509 io; // Create an SX1509 object to be used throughout
-VL53L1X sensors[sensorCount];
+SX1509 io;  // Create an SX1509 object to be used throughout
+VL53L1X sensorsL1[sensorCountL1];
+VL53L0X sensorsL0[sensorCountL0];
 
 
-#include <stdio.h> //Motor setup
-#include <time.h>  
-#include <Servo.h>
-
-Servo myservoA,myservoB;     // create servo object to control a servo
-int stop_speed = 1500;        // Variable to change direction of movement, 1500 = stop, 1900 = full speed foward, 1100 = full back
+//Motor setup
+Servo myservoA, myservoB;  // create servo object to control a servo
+int stop_speed = 1500;     // Variable to change direction of movement, 1500 = stop, 1900 = full speed foward, 1100 = full back
 int full_forward_speed = 1900;
 int full_reverse_speed = 1100;
 
@@ -69,15 +83,12 @@ int full_reverse_speed = 1100;
 // const int BtrigPin = 5;
 // const int BechoPin = 4;
 
-int timedelay = 10; //time in milliseconds, do not comment this out
+int timedelay = 10;  //time in milliseconds, do not comment this out
 // static long durationA, durationB, Acm, Bcm;
 
 
 
 //IMU setup
-// #include <Adafruit_Sensor.h>
-// #include <Adafruit_BNO055.h>
-// #include <utility/imumaths.h>
 
 // /* This driver uses the Adafruit unified sensor library (Adafruit_Sensor),
 //    which provides a common 'type' for sensor data and some helper functions.
@@ -118,60 +129,92 @@ int timedelay = 10; //time in milliseconds, do not comment this out
 
 
 
-
- 
-void setup() //Need one setup function
-{ 
+void setup()  //Need one setup function
+{
   //LEDs
-  pinMode(LED1,OUTPUT);
-  pinMode(LED2,OUTPUT);
-  pinMode(LED3,OUTPUT);
-  pinMode(LED4,OUTPUT);
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED3, OUTPUT);
+  pinMode(LED4, OUTPUT);
   digitalWrite(LED1, LOW);
   digitalWrite(LED2, LOW);
-  digitalWrite(LED3, LOW); //These will only be called once
-  digitalWrite(LED4, LOW); //These will only be called once
+  digitalWrite(LED3, LOW);  
+  digitalWrite(LED4, LOW);   //These will only be called once
+
+  //ElectroMagnet
+  pinMode(ElectroMagnet1Pin, OUTPUT);
+  pinMode(ElectroMagnet2Pin, OUTPUT);
+  pinMode(ElectroMagnet3Pin, OUTPUT);
+
+  //Induction sensor
+  pinMode(InductionPin, INPUT);
 
   //Color sensor
   //digitalWrite(ColorOnPin,HIGH);
-  
+
   //TOF
   // while (!Serial) {}    NO USB FOR RUNNING CODE
   // Serial.begin(115200);
 
-  if(!io.begin(SX1509_ADDRESS)){
+  if (!io.begin(SX1509_ADDRESS)) {
     Serial.println("Failed to to talk to IO Expander for TOFs");
-    while(1) {};
+    while (1) {};
   }
 
   Wire.begin();
-  Wire.setClock(400000); // use 400 kHz I2C
+  Wire.setClock(400000);  // use 400 kHz I2C
   Wire1.begin();
-  Wire1.setClock(400000); // use 400 kHz I2C
+  Wire1.setClock(400000);  // use 400 kHz I2C
 
   Serial.println("Setup Wires");
 
   // Disable/reset all sensors by driving their XSHUT pins low.
-  for (uint8_t i = 0; i < sensorCount; i++)
-  {
-    io.pinMode(xshutPins[i], OUTPUT);
-    io.digitalWrite(xshutPins[i], LOW);
-    //pinMode(xshutPins[i], OUTPUT);
-    //digitalWrite(xshutPins[i], LOW);
+  for (uint8_t i = 0; i < sensorCountL1; i++) {
+    io.pinMode(xshutPinsL1[i], OUTPUT);
+    io.digitalWrite(xshutPinsL1[i], LOW);
+  }
+  // Disable/reset all sensors by driving their XSHUT pins low.
+  for (uint8_t i = 0; i < sensorCountL0; i++) {
+    io.pinMode(xshutPinsL0[i], OUTPUT);
+    io.digitalWrite(xshutPinsL0[i], LOW);
+  }
+
+  for (uint8_t i = 0; i < sensorCountL0; i++) {
+    // Stop driving this sensor's XSHUT low. This should allow the carrier
+    // board to pull it high. (We do NOT want to drive XSHUT high since it is
+    // not level shifted.) Then wait a bit for the sensor to start up.
+    //pinMode(xshutPins[i], INPUT);
+    io.digitalWrite(xshutPinsL0[i], HIGH);
+    delay(10);
+
+    sensorsL0[i].setTimeout(500);
+    if (!sensorsL0[i].init()) {
+      Serial.print("Failed to detect and initialize sensor L0 ");
+      Serial.println(i);
+      while (1)
+        ;
+    }
+
+    // Each sensor must have its address changed to a unique value other than
+    // the default of 0x29 (except for the last one, which could be left at
+    // the default). To make it simple, we'll just count up from 0x2A.
+    sensorsL0[i].setAddress(VL53L0X_ADDRESS_START + i);
+
+    sensorsL0[i].startContinuous(50);
   }
 
   // Enable, initialize, and start each sensor, one by one.
-  for (uint8_t i = 0; i < sensorCount; i++)
+  for (uint8_t i = 0; i < sensorCountL1; i++)
   {
     // Stop driving this sensor's XSHUT low. This should allow the carrier
     // board to pull it high. (We do NOT want to drive XSHUT high since it is
     // not level shifted.) Then wait a bit for the sensor to start up.
     //pinMode(xshutPins[i], INPUT);
-    io.digitalWrite(xshutPins[i], HIGH);
+    io.digitalWrite(xshutPinsL1[i], HIGH);
     delay(10);
 
-    sensors[i].setTimeout(500);
-    if (!sensors[i].init())
+    sensorsL1[i].setTimeout(500);
+    if (!sensorsL1[i].init())
     {
       Serial.print("Failed to detect and initialize sensor ");
       Serial.println(i);
@@ -182,9 +225,9 @@ void setup() //Need one setup function
     // Each sensor must have its address changed to a unique value other than
     // the default of 0x29 (except for the last one, which could be left at
     // the default). To make it simple, we'll just count up from 0x2A.
-    sensors[i].setAddress(0x30 + i);
+    sensorsL1[i].setAddress(VL53L1X_ADDRESS_START + i);
 
-    sensors[i].startContinuous(50);
+    sensorsL1[i].startContinuous(50);
   }
 
   Serial.println("Configured TOFs");
@@ -201,7 +244,7 @@ void setup() //Need one setup function
 
   // pinMode(BtrigPin, OUTPUT);            //Setup ultrasound pins
   // pinMode(BechoPin, INPUT);
-  
+
   // digitalWrite(AtrigPin, LOW);
   // delayMicroseconds(2);
 
@@ -211,22 +254,22 @@ void setup() //Need one setup function
   // Serial.println("Configured Ultrasonics");
 
   //IMU
-//   Serial.println("Orientation Sensor Test"); Serial.println("");
+  //   Serial.println("Orientation Sensor Test"); Serial.println("");
 
-//   /* Initialise the sensor */
-//   if (!bno.begin())
-//   {
-//     /* There was a problem detecting the BNO055 ... check your connections */
-//     Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-//     while (1);
-//   }
-//   Serial.print("IMU detected");
-//  digitalWrite(IMUDetection,HIGH);
-//   delay(1000);
+  //   /* Initialise the sensor */
+  //   if (!bno.begin())
+  //   {
+  //     /* There was a problem detecting the BNO055 ... check your connections */
+  //     Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+  //     while (1);
+  //   }
+  //   Serial.print("IMU detected");
+  //  digitalWrite(IMUDetection,HIGH);
+  //   delay(1000);
 
 
-//   //Inductive sensor
-//   //digitalWrite(InductionOnPin,HIGH);
+  //   //Inductive sensor
+  //   //digitalWrite(InductionOnPin,HIGH);
 }
 
 void full_reverse(int timedelay) {
@@ -247,7 +290,7 @@ void full_forward(int timedelay) {
   myservoA.writeMicroseconds(full_forward_speed);
   myservoB.writeMicroseconds(full_forward_speed);
 
-  delay(timedelay); 
+  delay(timedelay);
 }
 
 void full_turn_left(int timedelay) {
@@ -259,14 +302,13 @@ void full_turn_left(int timedelay) {
 void directioncheck_left(int timedelay) {
   myservoA.writeMicroseconds(full_reverse_speed);
   myservoB.writeMicroseconds(full_forward_speed);
-  delay(timedelay*3); //Will be replaced by IMU code
-
+  delay(timedelay * 3);  //Will be replaced by IMU code
 }
 
 void full_turn_right(int timedelay) {
   myservoA.writeMicroseconds(full_forward_speed);
   myservoB.writeMicroseconds(full_reverse_speed);
-  delay(timedelay);  
+  delay(timedelay);
 }
 
 //Following two functions are for ultrasound
@@ -317,10 +359,9 @@ void full_turn_right(int timedelay) {
 //   return *XYZList;
 // }
 
-long microsecondsToCentimeters(long microseconds)
-{
+long microsecondsToCentimeters(long microseconds) {
   return microseconds / 29 / 2;
-} 
+}
 
 // sensors_event_t orientationData , accelerometerData; //, angVelocityData , linearAccelData, magnetometerData,  gravityData;
 // double ori[3] = {};
@@ -331,7 +372,7 @@ long microsecondsToCentimeters(long microseconds)
 //   bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER); //degrees
 //   //bno.getEvent(&angVelocityData, Adafruit_BNO055::VECTOR_GYROSCOPE); //rad/s
 //   //bno.getEvent(&linearAccelData, Adafruit_BNO055::VECTOR_LINEARACCEL); //m/s^2
-//   //bno.getEvent(&magnetometerData, Adafruit_BNO055::VECTOR_MAGNETOMETER); 
+//   //bno.getEvent(&magnetometerData, Adafruit_BNO055::VECTOR_MAGNETOMETER);
 //   bno.getEvent(&accelerometerData, Adafruit_BNO055::VECTOR_ACCELEROMETER); //Gravity detected
 //   //bno.getEvent(&gravityData, Adafruit_BNO055::VECTOR_GRAVITY); //Gravity preset
 
@@ -366,16 +407,15 @@ long microsecondsToCentimeters(long microseconds)
 
 
 
-void loop() 
-{ 
+void loop() {
   elapsed_time = millis()/1000; //Seconds since program has been running
   //Getting current acceleration and therefore position:
   //CurrentOrienX = SENSOR_TYPE_ACCELEROMETER->orientation.x
   //CurrentOrienY = SENSOR_TYPE_ACCELEROMETER->orientation.y
-    
+
   //Have weighted average of IMU and Encoder
-    
-    
+
+
   // for (uint16_t element=1; element<49; element++){                 //shifting the window of detected accelerations for X
   //   if (element == 48) {
   //     Xposlist[element] = 0;
@@ -431,47 +471,54 @@ void loop()
   // Serial.print(AverageOrienZ);
   // Serial.print("\n");
 
-  //Looks for walls with TOF
-  for (uint8_t i = 0; i < sensorCount; i++)
-  {
-    Serial.print(sensors[i].read());
-    if (sensors[i].timeoutOccurred()) { Serial.print(" TIMEOUT"); }
-      Serial.print('\t');
-    }
+
+  uint16_t Acm = sensorsL1[0].read()/10;  //Long range TOF reads
+  uint16_t Bcm = sensorsL1[1].read()/10;
+  uint16_t Ccm = sensorsL0[0].readRangeContinuousMillimeters()/10;
+  uint16_t Dcm = sensorsL0[1].readRangeContinuousMillimeters()/10;
+
+  Serial.print(Ccm);
+  if (sensorsL0[0].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
+    Serial.print('\t');
+  Serial.print(Dcm);
+  if (sensorsL0[1].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
+    Serial.print('\t');
+
+  Serial.print(Acm);
+  if (sensorsL1[0].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
+    Serial.print('\t');
+
+  Serial.print(Bcm);
+  if (sensorsL1[1].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
+    Serial.print('\t');
+
+  //Looks for walls with TOFs
+  // for (uint8_t i = 0; i < sensorCountL0; i++)
+  // {
+  //   Serial.print(sensorsL0[i].readRangeContinuousMillimeters());
+  //   if (sensorsL0[i].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
+  //   Serial.print('\t');
+  // }
+
+  // for (uint8_t i = 0; i < sensorCountL1; i++)
+  // {
+  //   Serial.print(sensorsL1[i].read());
+  //   if (sensorsL1[i].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
+  //     Serial.print('\t');
+  // }
   Serial.println();
 
-  uint16_t Acm = sensors[0].read()/10;  //Long range TOF reads
-  uint16_t Bcm = sensors[1].read()/10;
+
 
   if (elapsed_time < 100) {
     if (programState == 0) {
-      digitalWrite(LED3,LOW);
-      digitalWrite(LED2,LOW);
-      digitalWrite(LED1,HIGH); //Green top set
+      
+      digitalWrite(LED1,HIGH); //Green top set, on
       Serial.print("State 0\n");
       full_forward(timedelay); //can go full forward
 
-      
 
 
-      //Looks for walls with ultrasound sensor, NEED TO MAKE ISR for these
-      // A_read();
-      // B_read();
-
-      //Acm = microsecondsToCentimeters(durationA);
-      //Bcm = microsecondsToCentimeters(durationB);
-
-
-
-      //Serial.print(Acm);
-      //Serial.print(" ");
-      //Serial.print(Bcm);
-      //Serial.println();
-
-
-      //to Avoid Objects:
-      //if(Acm > 3300 || Bcm > 3300 ) {
-        //full_forward(timedelay);
       if (Acm<20 || Bcm<20) {
         programState = 1;
       }
@@ -480,26 +527,40 @@ void loop()
       digitalWrite(LED1,LOW);
       if (Acm < 20 && Bcm > 20) {
         full_turn_left(timedelay);
-        digitalWrite(LED2,HIGH); //Orange
         digitalWrite(LED3,LOW);
+        digitalWrite(LED2,HIGH); //Yellow
         Serial.print("Left\n");
       } else if(Acm > 20 && Bcm < 20) {
         full_turn_right(timedelay);
-        digitalWrite(LED2,HIGH); //Orange
         digitalWrite(LED3,LOW);
+        digitalWrite(LED2,HIGH); //YELLOW
         Serial.print("Right\n");
       } else if (Acm > 20 && Bcm > 20) {
+        digitalWrite(LED3,LOW); //off
+        digitalWrite(LED2,LOW); //off
         programState = 0;
-        digitalWrite(LED3,LOW);
-        digitalWrite(LED2,LOW);
         Serial.print("Open space ahead\n");
-      //} else if (Weightdetected) {
-        //programState = 2;
       } else {
         stop(timedelay);
-        Serial.print("Stopped\n");
+        Serial.print("Wall\n");
+        digitalWrite(LED2,LOW);
         digitalWrite(LED3,HIGH); //Red stopped
-        //If TOFs on side both have objects and ones on front have object in front, then it rorates 180 degrees and heads out 
+        if (Acm<Bcm) {
+          full_turn_left(timedelay);
+          if (Acm<20 || Bcm<20) {
+            full_turn_left(timedelay*6)
+          }
+        } else {
+          full_turn_right(timedelay);
+          if (Acm<20 || Bcm<20) {
+            full_turn_left(timedelay*6)
+          }
+        }
+        //If TOFs on side both have objects and ones on front have object in front, then it rorates 180 degrees and heads out
+      }
+
+      if (Acm-Ccm>50 || Bcm-Dcm>50 && Bcm>Dcm || Acm>Ccm) { //Object lower than weight is found
+        programState = 2;
       }
 
 
@@ -531,16 +592,59 @@ void loop()
 
       //Detecting weights using lower TOF:
       //If an object is found closer than the ultrasonic distance, it is an interrupt with a higher proiority than the turning process, will stop rotating and go forward at full power, then leaves the interruyptr
-    } //else if (programState == 2) {
-        //going to and picking up weights. ISR may not be needed due to TOF angular range
-        //digitalWrite(State01LEDpin,LOW);
-        //digitalWrite(State3LEDpin,LOW);
-        //digitalWrite(State2LEDpin,HIGH);
-      //}
-    //}
+    } else if (programState == 2) {
+      //going to and picking up weights. ISR may not be needed due to TOF angular range
+
+      if (Acm < 20 && Bcm > 20) {  //If walls to the sides are found by the top TOF sensors
+        full_turn_left(timedelay);
+        digitalWrite(LED3,LOW);
+        digitalWrite(LED2,HIGH); //Yellow
+        full_forward(timedelay/16);
+        full_turn_right(timedelay);
+        Serial.print("Left\n");
+      }
+      if (Acm > 20 && Bcm < 20) {
+        full_turn_right(timedelay);
+        digitalWrite(LED3,LOW);
+        digitalWrite(LED2,HIGH); //YELLOW
+        full_forward(timedelay/16);
+        full_turn_left(timedelay);
+        Serial.print("Right\n");
+      }
+
+      if (Acm-Ccm>50 || Bcm-Dcm>50 && Bcm>Dcm || Acm>Ccm) { //If weight found condition is still satisfied
+          if (Ccm<Dcm && Ccm>20 && Dcm>20) {
+          full_turn_left(timedelay/16); //should turn to the closer sensor
+          full_forward(timedelay/16);
+        } else if (Ccm>Dcm && Ccm>20 && Dcm>20) {
+          full_turn_right(timedelay/16);
+          full_forward(timedelay/16);
+        } else if (Ccm<20 && Dcm<20) {
+          full_forward(timedelay);
+          //Check inductive proximity sensor and if it activates then drive the relevant electromagnet
+          if (digitalRead(InductionPin) == 0) {
+            if (ElectroMagnet1On == True) {
+              if (ElectroMagnet2On == True) {
+                if (ElectroMagnet3On == False) {
+                  digitalWrite(ElectroMagnet13Pin, HIGH);  //the front 3rd electromagnet
+                }
+              }
+              digitalWrite(ElectroMagnet2Pin, HIGH);
+            }
+            digitalWrite(ElectroMagnet1Pin, HIGH);
+          }
+        }
+      } else {
+        programState = 0;
+      }
+      
+    }
   } else {
     //In the state to find the home base
     programState = 3;
+    digitalWrite(LED1,LOW);
+    digitalWrite(LED2,LOW);
+    digitalWrite(LED3,LOW);
     digitalWrite(LED4,HIGH); //Green bottom set
     //digitalWrite(State2LEDpin,LOW);
     //digitalWrite(State01LEDpin,LOW);
@@ -559,4 +663,3 @@ void loop()
 //or_x = orientationData->orientation.x
 //or_y = orientationData->orientation.y
 //or_z = orientationData->orientation.z
-
