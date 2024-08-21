@@ -33,9 +33,12 @@ int OrienZlist[50] = { 0 };
 const int ElectroMagnet1Pin = A12; //Electromagnet pins
 const int ElectroMagnet2Pin = A0;
 const int ElectroMagnet3Pin = A10;
+bool ElectroMagnet1On = false;
+bool ElectroMagnet2On = false;
+bool ElectroMagnet3On = false;
 
 //This means the pins, not entire ports which the cables connect to
-const int InductionPin = 26; //Induction sensor pin to check
+const int InductionPin = 27; //Induction sensor pin to check
 
 double elapsed_time = 0;
 const double two_minutes_in_seconds = 120.0;
@@ -58,11 +61,11 @@ const byte SX1509_ADDRESS = 0x3F;
 
 // The number of sensors in your system.
 const uint8_t sensorCountL0 = 2;  //sensorcount, 2 L1s, 2 l0s
-const uint8_t sensorCountL1 = 2;  //sensorcount, 2 L1s, 2 l0s
+const uint8_t sensorCountL1 = 3;  //sensorcount, 2 L1s, 2 l0s
 
 // The Arduino pin connected to the XSHUT pin of each sensor.
-const uint8_t xshutPinsL1[sensorCountL1] = {0, 1};  //Only two needed for two sensors, xshut ports
-const uint8_t xshutPinsL0[sensorCountL0] = {4, 7};  //Only two needed for two sensors, xshut ports
+const uint8_t xshutPinsL1[sensorCountL1] = {0, 1, 2};  //Only three needed for three sensors, xshut ports
+const uint8_t xshutPinsL0[sensorCountL0] = {3, 4};  //Only two needed for two sensors, xshut ports
 
 SX1509 io;  // Create an SX1509 object to be used throughout
 VL53L1X sensorsL1[sensorCountL1];
@@ -132,6 +135,7 @@ int timedelay = 10;  //time in milliseconds, do not comment this out
 void setup()  //Need one setup function
 {
   //LEDs
+  Serial.print("Setup");
   pinMode(LED1, OUTPUT);
   pinMode(LED2, OUTPUT);
   pinMode(LED3, OUTPUT);
@@ -140,6 +144,7 @@ void setup()  //Need one setup function
   digitalWrite(LED2, LOW);
   digitalWrite(LED3, LOW);  
   digitalWrite(LED4, LOW);   //These will only be called once
+
 
   //ElectroMagnet
   pinMode(ElectroMagnet1Pin, OUTPUT);
@@ -191,8 +196,7 @@ void setup()  //Need one setup function
     if (!sensorsL0[i].init()) {
       Serial.print("Failed to detect and initialize sensor L0 ");
       Serial.println(i);
-      while (1)
-        ;
+      while (1);
     }
 
     // Each sensor must have its address changed to a unique value other than
@@ -270,6 +274,8 @@ void setup()  //Need one setup function
 
   //   //Inductive sensor
   //   //digitalWrite(InductionOnPin,HIGH);
+
+  Serial.print("End of setup");
 }
 
 void full_reverse(int timedelay) {
@@ -406,9 +412,208 @@ long microsecondsToCentimeters(long microseconds) {
 // }
 
 
+//=========================================================================================================================================================================================================================================================
+//=========================================================================================================================================================================
+//========================================================================================================================================================================================================================================================
+//=========================================================================================================================================================================
+//========================================================================================================================================================================================================================================================
+
 
 void loop() {
-  elapsed_time = millis()/1000; //Seconds since program has been running
+    
+
+  //Setting up
+  uint16_t Acm = sensorsL1[0].read()/10;  //Long range TOF reads
+  uint16_t Bcm = sensorsL1[1].read()/10;
+  uint16_t Ecm = sensorsL1[2].read()/10;
+
+  uint16_t Ccm = sensorsL0[0].readRangeContinuousMillimeters()/10;
+  uint16_t Dcm = sensorsL0[1].readRangeContinuousMillimeters()/10;
+
+  elapsed_time = millis()/1000;
+
+  Serial.print(ElectroMagnet1On);
+  Serial.print(ElectroMagnet2On);
+  Serial.print(ElectroMagnet3On);
+  Serial.print("     ");
+
+  //State machine
+  if (Acm<20 || Bcm<20 || Ecm < 20) {
+    programState = 1;
+  }
+
+  if ((Acm-Dcm>50 || Bcm-Ccm>50) && (Bcm>Ccm || Acm>Dcm)) { //Object lower than weight is found
+    //Serial.print("Now State 2\n");
+    programState = 2;
+  }  
+    
+  if (elapsed_time > 1000) {
+    programState = 3;
+  }
+
+  if(programState == 0) {
+    Serial.print("Moving Forward");
+    digitalWrite(LED1,HIGH); //Green top set, on
+    full_forward(timedelay); //can go full forward
+  } else if(programState == 1) {
+    Serial.print("Turning");
+  } else if(programState == 2) {
+    Serial.print("Weight Found");
+  } else {
+    Serial.print("Going Home");
+    digitalWrite(LED1,LOW);
+    digitalWrite(LED2,LOW);
+    digitalWrite(LED3,LOW);
+    digitalWrite(LED4,HIGH);
+  } 
+  Serial.print("       ");
+
+  //Sensor readings
+  Serial.print("Top L ");
+  Serial.print(Acm);
+  if (sensorsL1[0].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
+    Serial.print('\t');
+
+  Serial.print("M ");
+  Serial.print(Ecm);
+  if (sensorsL1[2].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
+    Serial.print('\t');
+
+  Serial.print("R ");
+  Serial.print(Bcm);
+  if (sensorsL1[1].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
+    Serial.print('\t');
+
+  Serial.print("Bottom  R ");
+  Serial.print(Ccm);
+  if (sensorsL0[0].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
+    Serial.print('\t');
+
+  Serial.print("L ");
+  Serial.print(Dcm);
+  if (sensorsL0[1].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
+    Serial.print('\t');
+  Serial.println();
+
+
+  if (programState == 1) {
+    digitalWrite(LED1,LOW);
+    if (Acm < 20 && Bcm > 20) {
+      full_turn_left(timedelay);
+      digitalWrite(LED3,LOW);
+      digitalWrite(LED2,HIGH); //Yellow
+      //Serial.print("Left\n");
+
+    } else if(Acm > 20 && Bcm < 20) {
+      full_turn_right(timedelay);
+      digitalWrite(LED3,LOW);
+      digitalWrite(LED2,HIGH); //YELLOW
+      //Serial.print("Right\n");
+
+    } else if (Acm > 20 && Bcm > 20) {
+      digitalWrite(LED3,LOW); //off
+      digitalWrite(LED2,LOW); //off
+      programState = 0;
+      //Serial.print("Open space ahead\n");
+
+    } else {
+      stop(timedelay);
+      //Serial.print("Wall\n");
+      digitalWrite(LED2,LOW);
+      digitalWrite(LED3,HIGH); //Red stopped
+      if (Acm<Bcm) {
+        full_turn_left(timedelay);
+        if (Acm<20 || Bcm<20) {
+          full_turn_left(timedelay*6);
+        }
+      } else {
+        full_turn_right(timedelay);
+        if (Acm<20 || Bcm<20) {
+          full_turn_left(timedelay*6);
+        }
+      }
+    }
+
+  } else if (programState == 2) {
+    //going to and picking up weights. ISR may not be needed due to TOF angular range
+    //Serial.print("Detected Weight start of state 2\n");
+    if (Acm < 20 && Bcm > 20) {  //If walls to the sides are found by the top TOF sensors
+      full_turn_left(timedelay);
+      digitalWrite(LED3,LOW);
+      digitalWrite(LED2,HIGH); //Yellow
+      full_forward(timedelay);
+      full_turn_right(timedelay);
+      //Serial.print("detected wall go Left\n");
+    }
+    if (Acm > 20 && Bcm < 20) {
+      full_turn_right(timedelay);
+      digitalWrite(LED3,LOW);
+      digitalWrite(LED2,HIGH); //YELLOW
+      full_forward(timedelay/16);
+      full_turn_left(timedelay);
+      //Serial.print("detected wall go Right\n");
+    }
+
+    if (Acm-Ccm>50 || Bcm-Dcm>50 && Bcm>Dcm || Acm>Ccm) { //If weight found condition is still satisfied
+      
+      if (Ccm<Dcm && Ccm>20 && Dcm>20) {
+        full_turn_left(timedelay); //should turn to the closer sensor
+        full_forward(timedelay);
+      } else if (Ccm>Dcm && Ccm>20 && Dcm>20) {
+        full_turn_right(timedelay);
+        full_forward(timedelay);
+      } else if (Ccm<20 && Dcm<20) {
+        full_forward(timedelay);
+        
+        //Check inductive proximity sensor and if it activates then drive the relevant electromagnet
+        if (digitalRead(InductionPin) == 0) {
+          Serial.print("Induction detected Weight");
+          if (ElectroMagnet1On == true) {
+            if (ElectroMagnet2On == true) {
+              if (ElectroMagnet3On == false) {
+                digitalWrite(ElectroMagnet3Pin, HIGH);  //the front 3rd electromagnet
+                ElectroMagnet3On = true;
+                //Serial.print("Magnet 3 on\n");
+                programState=0;
+              }
+              //Serial.print("Magnet 2/3 on\n");
+            }
+            digitalWrite(ElectroMagnet2Pin, HIGH);
+            ElectroMagnet2On = true;
+            //Serial.print("Magnet 2 on\n");
+            programState=0;
+          }
+          digitalWrite(ElectroMagnet1Pin, HIGH);
+          ElectroMagnet1On = true;
+          //Serial.print("Magnet 1 on\n");
+          programState=0;
+        }
+      }
+    } else {
+      programState = 0;
+    }
+      
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ //Seconds since program has been running
   //Getting current acceleration and therefore position:
   //CurrentOrienX = SENSOR_TYPE_ACCELEROMETER->orientation.x
   //CurrentOrienY = SENSOR_TYPE_ACCELEROMETER->orientation.y
@@ -472,25 +677,11 @@ void loop() {
   // Serial.print("\n");
 
 
-  uint16_t Acm = sensorsL1[0].read()/10;  //Long range TOF reads
-  uint16_t Bcm = sensorsL1[1].read()/10;
-  uint16_t Ccm = sensorsL0[0].readRangeContinuousMillimeters()/10;
-  uint16_t Dcm = sensorsL0[1].readRangeContinuousMillimeters()/10;
 
-  Serial.print(Ccm);
-  if (sensorsL0[0].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
-    Serial.print('\t');
-  Serial.print(Dcm);
-  if (sensorsL0[1].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
-    Serial.print('\t');
 
-  Serial.print(Acm);
-  if (sensorsL1[0].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
-    Serial.print('\t');
 
-  Serial.print(Bcm);
-  if (sensorsL1[1].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
-    Serial.print('\t');
+
+
 
   //Looks for walls with TOFs
   // for (uint8_t i = 0; i < sensorCountL0; i++)
@@ -506,62 +697,11 @@ void loop() {
   //   if (sensorsL1[i].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
   //     Serial.print('\t');
   // }
-  Serial.println();
 
-
-
-  if (elapsed_time < 100) {
-    if (programState == 0) {
-      
-      digitalWrite(LED1,HIGH); //Green top set, on
-      Serial.print("State 0\n");
-      full_forward(timedelay); //can go full forward
-
-
-
-      if (Acm<20 || Bcm<20) {
-        programState = 1;
-      }
-    } else if (programState == 1) {
-      Serial.print("State 1\n");
-      digitalWrite(LED1,LOW);
-      if (Acm < 20 && Bcm > 20) {
-        full_turn_left(timedelay);
-        digitalWrite(LED3,LOW);
-        digitalWrite(LED2,HIGH); //Yellow
-        Serial.print("Left\n");
-      } else if(Acm > 20 && Bcm < 20) {
-        full_turn_right(timedelay);
-        digitalWrite(LED3,LOW);
-        digitalWrite(LED2,HIGH); //YELLOW
-        Serial.print("Right\n");
-      } else if (Acm > 20 && Bcm > 20) {
-        digitalWrite(LED3,LOW); //off
-        digitalWrite(LED2,LOW); //off
-        programState = 0;
-        Serial.print("Open space ahead\n");
-      } else {
-        stop(timedelay);
-        Serial.print("Wall\n");
-        digitalWrite(LED2,LOW);
-        digitalWrite(LED3,HIGH); //Red stopped
-        if (Acm<Bcm) {
-          full_turn_left(timedelay);
-          if (Acm<20 || Bcm<20) {
-            full_turn_left(timedelay*6)
-          }
-        } else {
-          full_turn_right(timedelay);
-          if (Acm<20 || Bcm<20) {
-            full_turn_left(timedelay*6)
-          }
-        }
         //If TOFs on side both have objects and ones on front have object in front, then it rorates 180 degrees and heads out
-      }
+//      }
 
-      if (Acm-Ccm>50 || Bcm-Dcm>50 && Bcm>Dcm || Acm>Ccm) { //Object lower than weight is found
-        programState = 2;
-      }
+
 
 
         //If robot is against a wall where does it go? The following is future code for later if two ultrasonic sensors are used
@@ -592,68 +732,10 @@ void loop() {
 
       //Detecting weights using lower TOF:
       //If an object is found closer than the ultrasonic distance, it is an interrupt with a higher proiority than the turning process, will stop rotating and go forward at full power, then leaves the interruyptr
-    } else if (programState == 2) {
-      //going to and picking up weights. ISR may not be needed due to TOF angular range
 
-      if (Acm < 20 && Bcm > 20) {  //If walls to the sides are found by the top TOF sensors
-        full_turn_left(timedelay);
-        digitalWrite(LED3,LOW);
-        digitalWrite(LED2,HIGH); //Yellow
-        full_forward(timedelay/16);
-        full_turn_right(timedelay);
-        Serial.print("Left\n");
-      }
-      if (Acm > 20 && Bcm < 20) {
-        full_turn_right(timedelay);
-        digitalWrite(LED3,LOW);
-        digitalWrite(LED2,HIGH); //YELLOW
-        full_forward(timedelay/16);
-        full_turn_left(timedelay);
-        Serial.print("Right\n");
-      }
-
-      if (Acm-Ccm>50 || Bcm-Dcm>50 && Bcm>Dcm || Acm>Ccm) { //If weight found condition is still satisfied
-          if (Ccm<Dcm && Ccm>20 && Dcm>20) {
-          full_turn_left(timedelay/16); //should turn to the closer sensor
-          full_forward(timedelay/16);
-        } else if (Ccm>Dcm && Ccm>20 && Dcm>20) {
-          full_turn_right(timedelay/16);
-          full_forward(timedelay/16);
-        } else if (Ccm<20 && Dcm<20) {
-          full_forward(timedelay);
-          //Check inductive proximity sensor and if it activates then drive the relevant electromagnet
-          if (digitalRead(InductionPin) == 0) {
-            if (ElectroMagnet1On == True) {
-              if (ElectroMagnet2On == True) {
-                if (ElectroMagnet3On == False) {
-                  digitalWrite(ElectroMagnet13Pin, HIGH);  //the front 3rd electromagnet
-                }
-              }
-              digitalWrite(ElectroMagnet2Pin, HIGH);
-            }
-            digitalWrite(ElectroMagnet1Pin, HIGH);
-          }
-        }
-      } else {
-        programState = 0;
-      }
-      
-    }
-  } else {
-    //In the state to find the home base
-    programState = 3;
-    digitalWrite(LED1,LOW);
-    digitalWrite(LED2,LOW);
-    digitalWrite(LED3,LOW);
-    digitalWrite(LED4,HIGH); //Green bottom set
-    //digitalWrite(State2LEDpin,LOW);
-    //digitalWrite(State01LEDpin,LOW);
-    //digitalWrite(State3LEDpin,HIGH);
-    Serial.print("Must find home base\n");
-  }
   //PrevPositionX = CurrentposX;
   //PrevOrienZ = CurrentOrienZ;
-}
+//}
 
 
 
