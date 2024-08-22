@@ -169,8 +169,8 @@ void setup()  //Need one setup function
   Serial.println("Configured TOFs");
 
   //Motors
-  myservoA.attach(0);  // attaches the servo  to the servo object using pin 0
-  myservoB.attach(1);  // attaches the servo  to the servo object using pin 1
+  // myservoA.attach(7);  // attaches the servo  to the servo object using pin 0
+  myservoB.attach(8);  // attaches the servo  to the servo object using pin 1 PROBLEM SERVO IDK WHY
 
   Serial.println("Configured Motors");
 
@@ -203,7 +203,6 @@ void full_forward(int timedelay) {
   myservoA.writeMicroseconds(full_forward_speed);
   myservoB.writeMicroseconds(full_forward_speed);
 
-  delay(timedelay);
 }
 
 void full_turn_left(int timedelay) {
@@ -236,7 +235,7 @@ void forward_right(int timedelay) {
 //=========================================================================================================================================================================
 //========================================================================================================================================================================================================================================================
 
-void PrintInfo(int programState) {
+void PrintInfo(int programState, uint16_t TopLeft, uint16_t TopMiddle, uint16_t TopRight, uint16_t MiddleLeft, uint16_t MiddleRight, uint16_t BottomRight, uint16_t BottomLeft) {
   
   //Electromagnets
   Serial.print(ElectroMagnet1On);
@@ -311,7 +310,7 @@ void loop() {
 
   programState = 0;
   // 0 = Foward, 1 = turning, 2 = weight found, 3 = going home
-  if (TopLeft < 20 || TopRight < 20 || TopMiddle < 20) {
+  if (TopLeft < 20 || TopRight < 20 || TopMiddle < 10) {
     programState = 1;
   }  
   if ((MiddleLeft > 20 && BottomLeft < 20) || (MiddleRight > 20 && BottomRight < 20)) { //Object like weight is found
@@ -321,7 +320,7 @@ void loop() {
     programState = 3;
   }
 
-  PrintInfo(programState);
+  PrintInfo(programState, TopLeft, TopMiddle, TopRight, MiddleLeft, MiddleRight, BottomRight, BottomLeft);
 
   if(programState == 0) {
     digitalWrite(LED1,HIGH); //Green top set, on
@@ -348,15 +347,13 @@ void loop() {
     } else if((TopMiddle < TopLeft) && (TopMiddle < TopRight)) {
       full_turn_left(timedelay);
     }
-
-    programState = 0;
   }
   
   if (programState == 2) {
     if(BottomLeft > BottomRight)
-      half_turn_left(timedelay);
+      forward_left(timedelay);
     } else {
-      half_turn_right(timedelay);
+      forward_right(timedelay);
     }
 
 }
