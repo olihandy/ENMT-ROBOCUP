@@ -471,7 +471,6 @@ void loop() {
   }
 
 
-
   //Sensor readings
   Serial.print("Top L ");
   Serial.print(TopLeft);
@@ -530,14 +529,14 @@ void loop() {
   if (programState == 1) {
     PrevturnTime = millis();
     digitalWrite(LED1,LOW);
-    if (TopLeft < 20 && TopRight > 20 && PrevturnTime-millis()>2000) {
+    if (TopLeft < 20 && TopRight > 20) { //&& PrevturnTime-millis()>2000
       full_turn_left(timedelay);
       previousMove = 0; //0 for left, 1 for right
       digitalWrite(LED3,LOW);
       digitalWrite(LED2,HIGH); //Yellow
       //Serial.print("Left\n");
 
-    } else if (TopLeft > 20 && TopRight < 20 && PrevturnTime-millis()>2000) {
+    } else if (TopLeft > 20 && TopRight < 20) { //&& PrevturnTime-millis()>2000
       full_turn_right(timedelay);
       previousMove = 1; //0 for left, 1 for right
       digitalWrite(LED3,LOW);
