@@ -13,6 +13,8 @@
 //InitColorReading =
 int CurrentposX = 0;
 int CurrentposY = 0;
+int previousMove = 0; //0 for left, 1 for right
+int PrevturnTime = 0;
 int Xposlist[50] = { 0 };
 int Yposlist[50] = { 0 };
 int AverageAccelerationX = 0;
@@ -60,12 +62,13 @@ const byte SX1509_ADDRESS = 0x3F;
 #define VL53L1X_ADDRESS_START 0x35
 
 // The number of sensors in your system.
-const uint8_t sensorCountL0 = 2;  //sensorcount, 2 L1s, 2 l0s
-const uint8_t sensorCountL1 = 3;  //sensorcount, 2 L1s, 2 l0s
+const uint8_t sensorCountL0 = 4;  //sensorcount 
+const uint8_t sensorCountL1 = 3;  //sensorcount
 
 // The Arduino pin connected to the XSHUT pin of each sensor.
 const uint8_t xshutPinsL1[sensorCountL1] = {0, 1, 2};  //Only three needed for three sensors, xshut ports
-const uint8_t xshutPinsL0[sensorCountL0] = {3, 4};  //Only two needed for two sensors, xshut ports
+const uint8_t xshutPinsL0[sensorCountL0] = {3, 4, 5, 6};  //Only two needed for two sensors, xshut ports
+//Left 6, Right 7
 
 SX1509 io;  // Create an SX1509 object to be used throughout
 VL53L1X sensorsL1[sensorCountL1];
@@ -78,6 +81,12 @@ int stop_speed = 1500;     // Variable to change direction of movement, 1500 = s
 int full_forward_speed = 1900;
 int full_reverse_speed = 1100;
 
+//Stepper Motor Setup
+int MAdirpin = 32;
+int MAsteppin = 33;
+int MBdirpin = 30;
+int MBsteppin = 31;
+
 
 //Ultrasound setup
 // const int AtrigPin = 3;
@@ -87,7 +96,7 @@ int full_reverse_speed = 1100;
 // const int BechoPin = 4;
 
 int timedelay = 10;  //time in milliseconds, do not comment this out
-// static long durationA, durationB, Acm, Bcm;
+// static long durationA, durationB, TopLeft, TopRight;
 
 
 
@@ -220,7 +229,7 @@ void setup()  //Need one setup function
     sensorsL1[i].setTimeout(500);
     if (!sensorsL1[i].init())
     {
-      Serial.print("Failed to detect and initialize sensor ");
+      Serial.print("Failed to detect and initialize sensor L1 ");
       Serial.println(i);
 
       while (1);
@@ -236,11 +245,19 @@ void setup()  //Need one setup function
 
   Serial.println("Configured TOFs");
 
-  //Motor
+  //Motors
   myservoA.attach(0);  // attaches the servo  to the servo object using pin 0
   myservoB.attach(1);  // attaches the servo  to the servo object using pin 1
 
   Serial.println("Configured Motors");
+
+  //Stepper Motors
+  pinMode(MAdirpin,OUTPUT);
+  pinMode(MAsteppin,OUTPUT);
+  pinMode(MBdirpin,OUTPUT);
+  pinMode(MBsteppin,OUTPUT);
+  digitalWrite(MAdirpin,LOW);
+  digitalWrite(MBdirpin,LOW);
 
   //Ultrasound
   // pinMode(AtrigPin, OUTPUT);            //Setup ultrasound pins
@@ -420,15 +437,15 @@ long microsecondsToCentimeters(long microseconds) {
 
 
 void loop() {
-    
-
   //Setting up
-  uint16_t Acm = sensorsL1[0].read()/10;  //Long range TOF reads
-  uint16_t Bcm = sensorsL1[1].read()/10;
-  uint16_t Ecm = sensorsL1[2].read()/10;
+  uint16_t TopLeft = sensorsL1[0].read()/10;  //Long range TOF reads
+  uint16_t TopRight = sensorsL1[1].read()/10;
+  uint16_t TopMiddle = sensorsL1[2].read()/10;
 
-  uint16_t Ccm = sensorsL0[0].readRangeContinuousMillimeters()/10;
-  uint16_t Dcm = sensorsL0[1].readRangeContinuousMillimeters()/10;
+  uint16_t MiddleRight = sensorsL0[0].readRangeContinuousMillimeters()/10;
+  uint16_t MiddleLeft = sensorsL0[1].readRangeContinuousMillimeters()/10;
+  uint16_t BottomRight = sensorsL0[2].readRangeContinuousMillimeters()/10;
+  uint16_t BottomLeft = sensorsL0[3].readRangeContinuousMillimeters()/10;
 
   elapsed_time = millis()/1000;
 
@@ -437,21 +454,62 @@ void loop() {
   Serial.print(ElectroMagnet3On);
   Serial.print("     ");
 
-  //State machine
-  if (Acm<20 || Bcm<20 || Ecm < 20) {
-    programState = 1;
-  }
-
-  if ((Acm-Dcm>50 || Bcm-Ccm>50) && (Bcm>Ccm || Acm>Dcm)) { //Object lower than weight is found
+  if (TopLeft-BottomRight>50 || TopRight-BottomLeft>50) { //Object like weight is found
     //Serial.print("Now State 2\n");
     programState = 2;
   }  
+
+  //State machine
+  if (TopLeft<20 || TopRight<20 || TopMiddle < 20) {
+    programState = 1;
+  }
+
+  
     
   if (elapsed_time > 1000) {
     programState = 3;
   }
 
-  if(programState == 0) {
+
+
+  //Sensor readings
+  Serial.print("Top L ");
+  Serial.print(TopLeft);
+  if (sensorsL1[0].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
+    Serial.print('\t');
+
+  Serial.print("M ");
+  Serial.print(TopMiddle);
+  if (sensorsL1[2].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
+    Serial.print('\t');
+
+  Serial.print("R ");
+  Serial.print(TopRight);
+  if (sensorsL1[1].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
+    Serial.print('\t');
+
+  Serial.print("Mid  R ");
+  Serial.print(MiddleRight);
+  if (sensorsL0[0].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
+    Serial.print('\t');
+
+  Serial.print("L ");
+  Serial.print(MiddleLeft);
+  if (sensorsL0[1].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
+    Serial.print('\t');
+
+  Serial.print("Bottom  R ");
+  Serial.print(BottomRight);
+  if (sensorsL0[2].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
+    Serial.print('\t');
+
+  Serial.print("L ");
+  Serial.print(BottomLeft);
+  if (sensorsL0[3].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
+    Serial.print('\t');
+
+
+  if(programState == 0) { //printing stuff relating to task
     Serial.print("Moving Forward");
     digitalWrite(LED1,HIGH); //Green top set, on
     full_forward(timedelay); //can go full forward
@@ -467,107 +525,104 @@ void loop() {
     digitalWrite(LED4,HIGH);
   } 
   Serial.print("       ");
-
-  //Sensor readings
-  Serial.print("Top L ");
-  Serial.print(Acm);
-  if (sensorsL1[0].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
-    Serial.print('\t');
-
-  Serial.print("M ");
-  Serial.print(Ecm);
-  if (sensorsL1[2].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
-    Serial.print('\t');
-
-  Serial.print("R ");
-  Serial.print(Bcm);
-  if (sensorsL1[1].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
-    Serial.print('\t');
-
-  Serial.print("Bottom  R ");
-  Serial.print(Ccm);
-  if (sensorsL0[0].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
-    Serial.print('\t');
-
-  Serial.print("L ");
-  Serial.print(Dcm);
-  if (sensorsL0[1].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
-    Serial.print('\t');
   Serial.println();
 
-
   if (programState == 1) {
+    PrevturnTime = millis();
     digitalWrite(LED1,LOW);
-    if (Acm < 20 && Bcm > 20) {
+    if (TopLeft < 20 && TopRight > 20 && PrevturnTime-millis()>2000) {
       full_turn_left(timedelay);
+      previousMove = 0; //0 for left, 1 for right
       digitalWrite(LED3,LOW);
       digitalWrite(LED2,HIGH); //Yellow
       //Serial.print("Left\n");
 
-    } else if(Acm > 20 && Bcm < 20) {
+    } else if (TopLeft > 20 && TopRight < 20 && PrevturnTime-millis()>2000) {
       full_turn_right(timedelay);
+      previousMove = 1; //0 for left, 1 for right
       digitalWrite(LED3,LOW);
       digitalWrite(LED2,HIGH); //YELLOW
       //Serial.print("Right\n");
 
-    } else if (Acm > 20 && Bcm > 20) {
+    } else if (TopLeft > 20 && TopRight > 20 && TopMiddle > 20) { //open space
       digitalWrite(LED3,LOW); //off
       digitalWrite(LED2,LOW); //off
       programState = 0;
       //Serial.print("Open space ahead\n");
-
-    } else {
-      stop(timedelay);
+    } else if (TopMiddle < 20) { //A thin slab of wall in front of the robot
+      digitalWrite(LED3,LOW); //off
+      digitalWrite(LED2,HIGH); //off
+      if (TopLeft<TopRight) { 
+        full_turn_left(timedelay);
+        previousMove = 0; //0 for left, 1 for right
+      } else {
+        full_turn_right(timedelay);
+        previousMove = 1; //0 for left, 1 for right
+      }
+    // } else if (PrevturnTime-millis() <= 2000) {
+    //   if (previousMove == 0) {
+    //     full_turn_left(timedelay);
+    //     previousMove = 0; //0 for left, 1 for right
+    //   } else {
+    //     full_turn_right(timedelay);
+    //     previousMove = 1; //0 for left, 1 for right
+    //   }
+    } else { //A large wall in front of the robot
+      //stop(timedelay);
       //Serial.print("Wall\n");
       digitalWrite(LED2,LOW);
       digitalWrite(LED3,HIGH); //Red stopped
-      if (Acm<Bcm) {
+      if (TopLeft<TopRight) {
         full_turn_left(timedelay);
-        if (Acm<20 || Bcm<20) {
-          full_turn_left(timedelay*6);
-        }
+        previousMove = 0; //0 for left, 1 for right
       } else {
         full_turn_right(timedelay);
-        if (Acm<20 || Bcm<20) {
-          full_turn_left(timedelay*6);
-        }
+        previousMove = 1; //0 for left, 1 for right
       }
     }
 
   } else if (programState == 2) {
     //going to and picking up weights. ISR may not be needed due to TOF angular range
     //Serial.print("Detected Weight start of state 2\n");
-    if (Acm < 20 && Bcm > 20) {  //If walls to the sides are found by the top TOF sensors
+    if (TopLeft < 20 && TopRight > 20) {  //If walls to the sides are found by the top TOF sensors
       full_turn_left(timedelay);
       digitalWrite(LED3,LOW);
       digitalWrite(LED2,HIGH); //Yellow
       full_forward(timedelay);
       full_turn_right(timedelay);
-      //Serial.print("detected wall go Left\n");
+      Serial.print("To weight avoid right");
     }
-    if (Acm > 20 && Bcm < 20) {
+    if (TopLeft > 20 && TopRight < 20) {
       full_turn_right(timedelay);
       digitalWrite(LED3,LOW);
       digitalWrite(LED2,HIGH); //YELLOW
-      full_forward(timedelay/16);
+      full_forward(timedelay);
       full_turn_left(timedelay);
-      //Serial.print("detected wall go Right\n");
+      Serial.print("To weight avoid left");
     }
 
-    if (Acm-Ccm>50 || Bcm-Dcm>50 && Bcm>Dcm || Acm>Ccm) { //If weight found condition is still satisfied
-      
-      if (Ccm<Dcm && Ccm>20 && Dcm>20) {
+    if (TopLeft-BottomRight>50 || TopRight-BottomLeft>50) { //If weight found condition is still satisfied
+      if (BottomRight<BottomLeft && BottomRight>20 && BottomLeft>20) {
         full_turn_left(timedelay); //should turn to the closer sensor
         full_forward(timedelay);
-      } else if (Ccm>Dcm && Ccm>20 && Dcm>20) {
+      } else if (BottomRight>BottomLeft && BottomRight>20 && BottomLeft>20) {
         full_turn_right(timedelay);
         full_forward(timedelay);
-      } else if (Ccm<20 && Dcm<20) {
+      } else if (BottomRight<20 && BottomLeft<20) {
         full_forward(timedelay);
-        
+        for(int j=0;j<=1000;j++)            //Move 1000 steps
+        {
+          digitalWrite(MAsteppin,LOW);
+          digitalWrite(MBsteppin,LOW);
+          delayMicroseconds(20);
+          digitalWrite(MAsteppin,HIGH);
+          digitalWrite(MBsteppin,HIGH);
+          delay(1);
+        }
         //Check inductive proximity sensor and if it activates then drive the relevant electromagnet
         if (digitalRead(InductionPin) == 0) {
           Serial.print("Induction detected Weight");
+          full_forward(timedelay);
           if (ElectroMagnet1On == true) {
             if (ElectroMagnet2On == true) {
               if (ElectroMagnet3On == false) {
@@ -587,14 +642,23 @@ void loop() {
           ElectroMagnet1On = true;
           //Serial.print("Magnet 1 on\n");
           programState=0;
+          digitalWrite(MAdirpin,HIGH);
+          digitalWrite(MBdirpin,HIGH);
+          for(int j=0;j<=1000;j++)            //Move 1000 steps
+          {
+            digitalWrite(MAsteppin,LOW);
+            digitalWrite(MBsteppin,LOW);
+            delayMicroseconds(20);
+            digitalWrite(MAsteppin,HIGH);
+            digitalWrite(MBsteppin,HIGH);
+            delay(1);
+          }
         }
       }
     } else {
       programState = 0;
-    }
-      
-    }
-
+    } 
+  }
 }
 
 
@@ -709,16 +773,16 @@ void loop() {
         //int8_t it_num = 0;
         //int32_t MaxCM = 0;
         //int8_t MaxCMElement = 0;
-        //if (Acm>Bcm) {
+        //if (TopLeft>TopRight) {
           //full_turn_left(timedelay);
           //Get IMU heading
           //if IMU heading is less than 360 degrees
             //A_read();
             //B_read();
-            //directionCheckarray[it_num] = [(Acm+Bcm)/2];
-            //if ((Acm+Bcm)/2 > (MaxCMElement)){
-              //MaxCM = (Acm+Bcm)/2;
-              //MaxCMElement = Acm;
+            //directionCheckarray[it_num] = [(TopLeft+TopRight)/2];
+            //if ((TopLeft+TopRight)/2 > (MaxCMElement)){
+              //MaxCM = (TopLeft+TopRight)/2;
+              //MaxCMElement = TopLeft;
             //}
             //it_num++;
             //full_turn_left(timedelay);
