@@ -32,9 +32,9 @@ int CurrentOrienZ = 0;
 int AverageOrienZ = 0;
 int OrienZlist[50] = { 0 };
 
-const int ElectroMagnet1Pin = A12; //Electromagnet pins
-const int ElectroMagnet2Pin = A10;
-const int ElectroMagnet3Pin = A0;
+const int ElectroMagnet1Pin = 26; //Electromagnet pins, changed from A as the front and rear near turn on
+const int ElectroMagnet2Pin = 24;
+const int ElectroMagnet3Pin = 14;
 bool ElectroMagnet1On = false;
 bool ElectroMagnet2On = false;
 bool ElectroMagnet3On = false;
@@ -475,12 +475,13 @@ void loop() {
   Serial.print(ElectroMagnet3On);
   Serial.print("     ");
 
+  //State machine
   if ((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50) || programState == 2) { //Object like weight is found
     //Serial.print("Now State 2\n");
     programState = 2;
     Serial.print("2 Activated  ");
   }  
-  //State machine
+  
   else if (TopLeft<20 || TopRight<20 || TopMiddle < 20) {
     programState = 1;
     Serial.print("1 Activated  ");
@@ -491,7 +492,7 @@ void loop() {
     Serial.print("3 Activated  ");
   }
 
-  // if (digitalRead(CollectPin)==1) {
+  // if (digitalRead(CollectPin)==1) { //For collection if weights still have to be in robot
   //   programState=4;
   //   analogWrite(ElectroMagnet1Pin, 50);
   //   analogWrite(ElectroMagnet2Pin, 50);
@@ -637,21 +638,21 @@ void loop() {
     if ((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50)) { //If weight found condition is still satisfied
       //half_forward(timedelay);
       if ((MiddleRight - BottomRight)<(MiddleLeft - BottomLeft) && (BottomLeft>20)) {
-        forward_left(timedelay); //should turn to the closer sensor
+        forward_left(timedelay); //should turn to the closer sensor where the weight is
         Serial.print("To weight left");
       } else if ((MiddleRight - BottomRight)>(MiddleLeft - BottomLeft) && (BottomRight>20)) {
         forward_right(timedelay);
         //full_forward(timedelay);
         Serial.print("To weight right");
-      } else if ((BottomRight<20 || BottomLeft<20)  && (MiddleRight> 20 && MiddleLeft> 20)) {
+      } else if ((BottomRight<20 || BottomLeft<20)  && (MiddleRight> 20 && MiddleLeft> 20)) { //If weight is within 20cm from bottom sensors
         Serial.print("20 cm from weight");
         half_forward(timedelay);
         //Check inductive proximity sensor and if it activates then drive the relevant electromagnet
-        if (digitalRead(InductionPin) == 0) {
+        if (digitalRead(InductionPin) == 0) { //Checks to read
           Serial.print("Induction detected Weight");
           digitalWrite(MAdirpin,LOW); //HIGH for up, LOW for down
           digitalWrite(MBdirpin,LOW);
-          for(int j=0;j<=10000;j++) 
+          for(int j=0;j<=10000;j++) //Steppers down
           {
             digitalWrite(MAsteppin,LOW);
             digitalWrite(MBsteppin,LOW);
@@ -661,7 +662,7 @@ void loop() {
             delay(1);
           }
           half_forward(timedelay*5);
-          if (ElectroMagnet1On == true) {
+          if (ElectroMagnet1On == true) { //Relevant Electromagnet on
             if (ElectroMagnet2On == true) {
               if (ElectroMagnet3On == false) {
                 analogWrite(ElectroMagnet3Pin, 50);  //the front 3rd electromagnet
@@ -671,7 +672,7 @@ void loop() {
               }
               //Serial.print("Magnet 2/3 on\n");
             }
-            analogWrite(ElectroMagnet2Pin, 50);
+            analogWrite(ElectroMagnet2Pin, 50); //50% duty cycle
             ElectroMagnet2On = true;
             //Serial.print("Magnet 2 on\n");
             programState=0;
@@ -681,7 +682,7 @@ void loop() {
           //Serial.print("Magnet 1 on\n");
           programState=0;
         }
-        digitalWrite(MAdirpin,HIGH);
+        digitalWrite(MAdirpin,HIGH); //Steppers up
         digitalWrite(MBdirpin,HIGH);
         for(int j=0;j<=10000;j++)            //Move 1000 steps
         {
@@ -693,10 +694,10 @@ void loop() {
           delay(1);
         }
       }
-    } else {
+    } else { //If it looses the weight
       programState = 0;
     } 
-    Serial.println();
+    Serial.println(); //Next line
   }
 }
 
