@@ -9,7 +9,7 @@
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
 
-const int ElectroMagnet1Pin = 26; //Electromagnet pins, changed from A as the front and rear never turn on
+const int ElectroMagnet1Pin = 25; //Electromagnet pins, changed from A as the front and rear never turn on
 const int ElectroMagnet2Pin = 24;
 const int ElectroMagnet3Pin = 14;
 bool ElectroMagnet1On = false;
@@ -41,6 +41,7 @@ int OrienZlist[50] = { 0 };
 
 //This means the pins, not entire ports which the cables connect to
 const int InductionPin = 27; //Induction sensor pin to check
+int InductionDetected = 0;
 const int CollectPin = 15;
 
 double elapsed_time = 0;
@@ -90,7 +91,9 @@ int MAdirpin = 32;
 int MAsteppin = 33;
 int MBdirpin = 30;
 int MBsteppin = 31;
-int StepperPosition = 10000;
+int StepperPosition = 14000;
+int StepperState = 0; //0 for moving down, 1 for stopping to make electromsagnets work, 2 for back up then resets to 0 afterwards
+
 
 int timedelay = 10;  //time in milliseconds, do not comment this out
 // static long durationA, durationB, TopLeft, TopRight;
@@ -303,32 +306,32 @@ void half_forward(int timedelay) {
   delay(timedelay);
 }
 
-void full_turn_left(int timedelay) {
+void full_turn_right(int timedelay) {
   myservoA.writeMicroseconds(full_reverse_speed);
   myservoB.writeMicroseconds(full_forward_speed);
   delay(timedelay);
 }
 
-void forward_left(int timedelay) {
+void forward_right(int timedelay) {
   myservoA.writeMicroseconds(half_forward_speed);
   myservoB.writeMicroseconds(full_forward_speed);
   delay(timedelay);
 }
 
-void directioncheck_left(int timedelay) {
+void directioncheck_right(int timedelay) {
   myservoA.writeMicroseconds(full_reverse_speed);
   myservoB.writeMicroseconds(full_forward_speed);
   delay(timedelay * 3);  //Will be replaced by IMU code
 }
 
-void full_turn_right(int timedelay) {
+void full_turn_left(int timedelay) {
   myservoA.writeMicroseconds(full_forward_speed);
   myservoB.writeMicroseconds(full_reverse_speed);
   delay(timedelay);
 }
 
 
-void forward_right(int timedelay) {
+void forward_left(int timedelay) {
   myservoA.writeMicroseconds(full_forward_speed);
   myservoB.writeMicroseconds(half_forward_speed);
 }
@@ -420,14 +423,14 @@ long microsecondsToCentimeters(long microseconds) {
 
 void loop() {
   //Setting up
-  uint16_t TopLeft = sensorsL1[0].read()/10;  //Long range TOF reads
-  uint16_t TopRight = sensorsL1[1].read()/10;
+  uint16_t TopRight = sensorsL1[0].read()/10;  //Long range TOF reads
+  uint16_t TopLeft = sensorsL1[1].read()/10;
   uint16_t TopMiddle = sensorsL1[2].read()/10;
 
-  uint16_t MiddleRight = sensorsL0[0].readRangeContinuousMillimeters()/10;
-  uint16_t MiddleLeft = sensorsL0[1].readRangeContinuousMillimeters()/10;
-  uint16_t BottomRight = sensorsL0[2].readRangeContinuousMillimeters()/10;
-  uint16_t BottomLeft = sensorsL0[3].readRangeContinuousMillimeters()/10;
+  uint16_t MiddleLeft = sensorsL0[0].readRangeContinuousMillimeters()/10;
+  uint16_t MiddleRight = sensorsL0[1].readRangeContinuousMillimeters()/10;
+  uint16_t BottomLeft = sensorsL0[2].readRangeContinuousMillimeters()/10;
+  uint16_t BottomRight = sensorsL0[3].readRangeContinuousMillimeters()/10;
 
   elapsed_time = millis()/1000;
 
@@ -437,17 +440,15 @@ void loop() {
   Serial.print("     ");
 
   //State machine
-  if (((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50) || (programState == 2)) && (elapsed_time <= 1000)) { //Object like weight is found
-    //Serial.print("Now State 2\n");
+  if (((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50) || (InductionDetected == 1)) && (elapsed_time <= 100)) { //Object like weight is found
     programState = 2;
-    Serial.print("2 Activated  ");
-  }  else if ((TopLeft < 20 || TopRight < 20 || TopMiddle < 20) && (elapsed_time <= 1000)) {
+  } else if ((TopLeft < 20 || TopRight < 20 || TopMiddle < 20) && (elapsed_time <= 100)) {
     programState = 1;
-    Serial.print("1 Activated  ");
-  } else if ((elapsed_time > 1000) || (ElectroMagnet1On & ElectroMagnet2On & ElectroMagnet3On)) {
+  } else if ((elapsed_time > 100) || (ElectroMagnet1On && ElectroMagnet2On && ElectroMagnet3On)) {
     programState = 3;
-    Serial.print("3 Activated  ");
   }
+  Serial.print(elapsed_time);
+  Serial.print("\t");
 
   // if (digitalRead(CollectPin)==1) { //For collection if weights still have to be in robot
   //   programState=4;
@@ -505,7 +506,6 @@ void loop() {
     Serial.print("Moving Forward");
     digitalWrite(LED1,HIGH); //Green top set, on
     full_forward(timedelay); //can go full forward
-    Serial.println();
   } else if(programState == 1) {
     Serial.print("Turning");
   } else if(programState == 2) {
@@ -516,131 +516,156 @@ void loop() {
     digitalWrite(LED2,LOW);
     digitalWrite(LED3,LOW);
     digitalWrite(LED4,HIGH);
-    Serial.println();
   } 
   Serial.print("       ");
   
 
   if (programState == 1) {
     digitalWrite(LED1,LOW);
-    if (TopLeft < 20 && TopRight > 20) { //&& PrevturnTime-millis()>2000
-      full_turn_left(timedelay);
-      digitalWrite(LED3,LOW);
-      digitalWrite(LED2,HIGH); //Yellow
-      Serial.print(" Left");
-
-    } else if (TopLeft > 20 && TopRight < 20) { //&& PrevturnTime-millis()>2000
+    if (TopLeft < 20 && TopMiddle > 20 && TopRight > 20) { //&& PrevturnTime-millis()>2000
       full_turn_right(timedelay);
       digitalWrite(LED3,LOW);
-      digitalWrite(LED2,HIGH); //YELLOW
+      digitalWrite(LED2,HIGH); //Yellow
       Serial.print(" Right");
-
-    } else if (TopLeft > 20 && TopRight > 20 && TopMiddle > 20) { //open space
+    } else if (TopLeft > 20 && TopMiddle > 20 && TopRight < 20) { //&& PrevturnTime-millis()>2000
+      full_turn_left(timedelay);
+      digitalWrite(LED3,LOW);
+      digitalWrite(LED2,HIGH); //YELLOW
+      Serial.print(" Left");
+    } else if (TopLeft > 20 && TopMiddle > 20 && TopRight > 20) { //open space
       digitalWrite(LED3,LOW); //off
       digitalWrite(LED2,LOW); //off
       programState = 0;
-    } else if (TopMiddle < 20) { //A thin slab of wall in front of the robot
+    } else if (TopLeft > 20 && TopMiddle < 20 && TopRight > 20) { //A thin slab of wall in front of the robot
       digitalWrite(LED3,LOW); //off
       digitalWrite(LED2,HIGH); //off
       if (TopLeft<TopRight) { 
-        full_turn_left(timedelay);
-        Serial.print("Slab Turn Left");
-      } else {
         full_turn_right(timedelay);
         Serial.print("Slab Turn Right");
+      } else {
+        full_turn_left(timedelay);
+        Serial.print("Slab Turn Left");
       }
-    } else { //A large wall in front of the robot
+    } else if (TopLeft < 20 && TopMiddle < 20 && TopRight < 20) { //Solid Wall ahead
+      if (TopLeft<TopRight) {
+        full_turn_right(timedelay*5);
+      } else {
+        full_turn_left(timedelay*5);
+      }
+      Serial.print("180 degree turn");
+    } else if (TopLeft < 20 && TopMiddle > 20 && TopRight < 20) {
+      full_forward(timedelay);
+      Serial.print("Space in Between");
+    } else { //A large wall in front of just more than half of the robot
       digitalWrite(LED2,LOW);
       digitalWrite(LED3,HIGH); //Red stopped
       if (TopLeft<TopRight) {
-        full_turn_left(timedelay);
-        Serial.print("Wall Turn Left");
-      } else {
         full_turn_right(timedelay);
         Serial.print("Wall Turn Right");
+      } else {
+        full_turn_left(timedelay);
+        Serial.print("Wall Turn Left");
       }
     }
-    Serial.println();
   } else if (programState == 2) {
     //going to and picking up weights. ISR may not be needed due to TOF angular range
     if (TopLeft < 20 && TopRight > 20) {  //If walls to the sides are found by the top TOF sensors
-      forward_left(timedelay);
+      full_turn_left(timedelay);
       digitalWrite(LED3,LOW);
       digitalWrite(LED2,HIGH); //Yellow
       Serial.print("To weight avoid right");
     }
     if (TopLeft > 20 && TopRight < 20) {
-      forward_right(timedelay);
+      full_turn_right(timedelay);
       digitalWrite(LED3,LOW);
       digitalWrite(LED2,HIGH); //YELLOW
       Serial.print("To weight avoid left");
     }
 
-    if ((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50)) { //If weight found condition is still satisfied
-      if ((MiddleRight - BottomRight)<(MiddleLeft - BottomLeft) && (BottomLeft>20)) {
-        forward_left(timedelay); //should turn to the closer sensor where the weight is
-        Serial.print("To weight left");
-      } else if ((MiddleRight - BottomRight)>(MiddleLeft - BottomLeft) && (BottomRight>20)) {
-        forward_right(timedelay);
-        Serial.print("To weight right");
-      } else if ((BottomRight<20 || BottomLeft<20)  && (MiddleRight> 20 && MiddleLeft> 20)) { //If weight is within 20cm from bottom sensors
-        Serial.print("20 cm from weight");
-        half_forward(timedelay);
-        //Check inductive proximity sensor and if it activates then drive the relevant electromagnet
-        if (digitalRead(InductionPin) == 0) { //Checks to read
-          Serial.print("Induction detected Weight");
-          digitalWrite(MAdirpin,LOW); //HIGH for up, LOW for down
-          digitalWrite(MBdirpin,LOW);
-          for(int j=0;j<=10000;j++) //Steppers down
+    
+
+    if (InductionDetected == 1) {
+      if ((StepperPosition>0) && (StepperState == 0)) //Steppers down
+      {
+        digitalWrite(MAdirpin,LOW); //HIGH for up, LOW for down
+        digitalWrite(MBdirpin,LOW);
+        Serial.print("\tStepper going down");
+        for(int j=1000;j>0;j--)            //Move 1000 steps
+        {
+          digitalWrite(MAsteppin,LOW);
+          digitalWrite(MBsteppin,LOW);
+          delayMicroseconds(20);
+          digitalWrite(MAsteppin,HIGH);
+          digitalWrite(MBsteppin,HIGH);
+          delay(1);
+        }
+        //delay(1);
+        StepperPosition-=1000;
+        Serial.print(StepperPosition);
+      } else if ((StepperPosition<=0) && (StepperState == 0)) { //When Steppers are fully down
+        StepperState = 1;
+        Serial.print("\tTurning Magnets on\t");
+        if (ElectroMagnet1On == true) { //Relevant Electromagnet on
+          if (ElectroMagnet2On == true) {
+            if (ElectroMagnet3On == false) {
+              analogWrite(ElectroMagnet3Pin, 0.6*255);  //the front 3rd electromagnet
+              ElectroMagnet3On = true;
+            }
+          } else {
+            analogWrite(ElectroMagnet2Pin, 0.6*255); //90% duty cycle
+            ElectroMagnet2On = true;
+          }
+        } else {
+          analogWrite(ElectroMagnet1Pin, 0.6*255);
+          ElectroMagnet1On = true;
+        }
+        half_forward(timedelay*5);
+        StepperState = 2;
+      }
+      if (StepperState == 2) {
+        Serial.print("\tStepper going up\t");
+        digitalWrite(MAdirpin,HIGH); //Steppers up
+        digitalWrite(MBdirpin,HIGH);
+        if (StepperPosition<14000)            //Move 1000 steps
+        {
+          for(int j=0;j<=1000;j++)            //Move 1000 steps
           {
             digitalWrite(MAsteppin,LOW);
             digitalWrite(MBsteppin,LOW);
-            delayMicroseconds(10);
+            delayMicroseconds(20);
             digitalWrite(MAsteppin,HIGH);
             digitalWrite(MBsteppin,HIGH);
             delay(1);
           }
-          half_forward(timedelay*5);
-          if (ElectroMagnet1On == true) { //Relevant Electromagnet on
-            if (ElectroMagnet2On == true) {
-              if (ElectroMagnet3On == false) {
-                analogWrite(ElectroMagnet3Pin, 90*255);  //the front 3rd electromagnet
-                ElectroMagnet3On = true;
-                //Serial.print("Magnet 3 on\n");
-                
-              }
-              //Serial.print("Magnet 2/3 on\n");
-              programState=0;
-            } else {
-              analogWrite(ElectroMagnet2Pin, 0.9*255); //90% duty cycle
-              ElectroMagnet2On = true;
-              //Serial.print("Magnet 2 on\n");
-            }
-            programState=0;
-          } else {
-            analogWrite(ElectroMagnet1Pin, 90*255);
-            ElectroMagnet1On = true;
-            //Serial.print("Magnet 1 on\n");
-          }
+          StepperPosition+=1000;
+          Serial.print(StepperPosition);
+        } else { //When steppers are fully up
           programState=0;
+          InductionDetected = 0;
+          StepperState = 0;
         }
-        digitalWrite(MAdirpin,HIGH); //Steppers up
-        digitalWrite(MBdirpin,HIGH);
-        for(int j=0;j<=10000;j++)            //Move 1000 steps
-        {
-          digitalWrite(MAsteppin,LOW);
-          digitalWrite(MBsteppin,LOW);
-          delayMicroseconds(10);
-          digitalWrite(MAsteppin,HIGH);
-          digitalWrite(MBsteppin,HIGH);
-          delay(1);
+      }
+    } else if ((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50)) { //If weight found condition is still satisfied
+      if ((MiddleRight - BottomRight)<(MiddleLeft - BottomLeft) && (BottomLeft>20)) {
+        full_turn_left(timedelay); //should turn to the closer sensor where the weight is
+        Serial.print("\tTo weight left");
+      } else if ((MiddleRight - BottomRight)>(MiddleLeft - BottomLeft) && (BottomRight>20)) {
+        full_turn_right(timedelay);
+        Serial.print("\tTo weight right");
+      } else if ((BottomRight<20 || BottomLeft<20)  && (MiddleRight> 20 && MiddleLeft> 20)) { //If weight is within 20cm from bottom sensors
+        Serial.print("\t20 cm from weight");
+        half_forward(timedelay);
+        //Check inductive proximity sensor and if it activates then drive the relevant electromagnet
+        if (digitalRead(InductionPin) == 0) { //Checks to read
+          Serial.print("Induction detected Weight");
+          InductionDetected = 1;
         }
       }
     } else { //If it looses the weight on the sensors
       programState = 0;
     } 
-    Serial.println(); //Next line
   }
+  Serial.println(); //Next line
 }
 
 
