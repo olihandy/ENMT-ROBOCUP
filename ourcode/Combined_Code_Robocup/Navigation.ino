@@ -9,6 +9,13 @@
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
 
+const int ElectroMagnet1Pin = 26; //Electromagnet pins, changed from A as the front and rear never turn on
+const int ElectroMagnet2Pin = 24;
+const int ElectroMagnet3Pin = 14;
+bool ElectroMagnet1On = false;
+bool ElectroMagnet2On = false;
+bool ElectroMagnet3On = false;
+
 //Can't call functions globally, Global variables are set up here
 //InitColorReading =
 int CurrentposX = 0;
@@ -31,13 +38,6 @@ int prevtime = 0;
 int CurrentOrienZ = 0;
 int AverageOrienZ = 0;
 int OrienZlist[50] = { 0 };
-
-const int ElectroMagnet1Pin = 26; //Electromagnet pins, changed from A as the front and rear near turn on
-const int ElectroMagnet2Pin = 24;
-const int ElectroMagnet3Pin = 14;
-bool ElectroMagnet1On = false;
-bool ElectroMagnet2On = false;
-bool ElectroMagnet3On = false;
 
 //This means the pins, not entire ports which the cables connect to
 const int InductionPin = 27; //Induction sensor pin to check
@@ -63,8 +63,8 @@ const byte SX1509_ADDRESS = 0x3F;
 #define VL53L1X_ADDRESS_START 0x35
 
 // The number of sensors in your system.
-const uint8_t sensorCountL0 = 4;  //sensorcount 
 const uint8_t sensorCountL1 = 3;  //sensorcount
+const uint8_t sensorCountL0 = 4;  //sensorcount 
 
 // The Arduino pin connected to the XSHUT pin of each sensor.
 const uint8_t xshutPinsL1[sensorCountL1] = {0, 1, 2};  //Only three needed for three sensors, xshut ports
@@ -90,14 +90,7 @@ int MAdirpin = 32;
 int MAsteppin = 33;
 int MBdirpin = 30;
 int MBsteppin = 31;
-
-
-//Ultrasound setup
-// const int AtrigPin = 3;
-// const int AechoPin = 2;
-
-// const int BtrigPin = 5;
-// const int BechoPin = 4;
+int StepperPosition = 10000;
 
 int timedelay = 10;  //time in milliseconds, do not comment this out
 // static long durationA, durationB, TopLeft, TopRight;
@@ -261,21 +254,6 @@ void setup()  //Need one setup function
   pinMode(MBdirpin,OUTPUT);
   pinMode(MBsteppin,OUTPUT);
 
-  //Ultrasound
-  // pinMode(AtrigPin, OUTPUT);            //Setup ultrasound pins
-  // pinMode(AechoPin, INPUT);
-
-  // pinMode(BtrigPin, OUTPUT);            //Setup ultrasound pins
-  // pinMode(BechoPin, INPUT);
-
-  // digitalWrite(AtrigPin, LOW);
-  // delayMicroseconds(2);
-
-  // digitalWrite(BtrigPin, LOW);
-  // delayMicroseconds(2);
-
-  // Serial.println("Configured Ultrasonics");
-
   //IMU
   //   Serial.println("Orientation Sensor Test"); Serial.println("");
 
@@ -354,23 +332,6 @@ void forward_right(int timedelay) {
   myservoA.writeMicroseconds(full_forward_speed);
   myservoB.writeMicroseconds(half_forward_speed);
 }
-
-//Following two functions are for ultrasound
-// long A_read(void) {
-//   digitalWrite(AtrigPin, HIGH);
-//   delayMicroseconds(10);
-//   digitalWrite(AtrigPin, LOW);
-//   durationA = pulseIn(AechoPin, HIGH);
-//   return durationA;
-// }
-
-// long B_read(void) {
-//   digitalWrite(BtrigPin, HIGH);
-//   delayMicroseconds(10);
-//   digitalWrite(BtrigPin, LOW);
-//   durationB = pulseIn(BechoPin, HIGH);
-//   return durationB;
-// }
 
 //int colorRead() {
 
@@ -476,18 +437,14 @@ void loop() {
   Serial.print("     ");
 
   //State machine
-  if ((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50) || programState == 2) { //Object like weight is found
+  if (((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50) || (programState == 2)) && (elapsed_time <= 1000)) { //Object like weight is found
     //Serial.print("Now State 2\n");
     programState = 2;
     Serial.print("2 Activated  ");
-  }  
-  
-  else if (TopLeft<20 || TopRight<20 || TopMiddle < 20) {
+  }  else if ((TopLeft < 20 || TopRight < 20 || TopMiddle < 20) && (elapsed_time <= 1000)) {
     programState = 1;
     Serial.print("1 Activated  ");
-  }
-    
-  if ((elapsed_time > 1000) || (ElectroMagnet1On & ElectroMagnet2On & ElectroMagnet3On)) {
+  } else if ((elapsed_time > 1000) || (ElectroMagnet1On & ElectroMagnet2On & ElectroMagnet3On)) {
     programState = 3;
     Serial.print("3 Activated  ");
   }
@@ -498,6 +455,8 @@ void loop() {
   //   analogWrite(ElectroMagnet2Pin, 50);
   //   analogWrite(ElectroMagnet3Pin, 50);
   //   ElectroMagnet1On = true;
+  //   ElectroMagnet2On = true;
+  //   ElectroMagnet3On = true;
   //   Serial.print("4 Activated  ");
   //   while(1){
   //     stop(timedelay);
@@ -563,18 +522,15 @@ void loop() {
   
 
   if (programState == 1) {
-    //PrevturnTime = millis();
     digitalWrite(LED1,LOW);
     if (TopLeft < 20 && TopRight > 20) { //&& PrevturnTime-millis()>2000
       full_turn_left(timedelay);
-      //previousMove = 0; //0 for left, 1 for right
       digitalWrite(LED3,LOW);
       digitalWrite(LED2,HIGH); //Yellow
       Serial.print(" Left");
 
     } else if (TopLeft > 20 && TopRight < 20) { //&& PrevturnTime-millis()>2000
       full_turn_right(timedelay);
-      //previousMove = 1; //0 for left, 1 for right
       digitalWrite(LED3,LOW);
       digitalWrite(LED2,HIGH); //YELLOW
       Serial.print(" Right");
@@ -583,40 +539,25 @@ void loop() {
       digitalWrite(LED3,LOW); //off
       digitalWrite(LED2,LOW); //off
       programState = 0;
-      //Serial.print("Open space ahead\n");
     } else if (TopMiddle < 20) { //A thin slab of wall in front of the robot
       digitalWrite(LED3,LOW); //off
       digitalWrite(LED2,HIGH); //off
       if (TopLeft<TopRight) { 
         full_turn_left(timedelay);
         Serial.print("Slab Turn Left");
-        //previousMove = 0; //0 for left, 1 for right
       } else {
         full_turn_right(timedelay);
         Serial.print("Slab Turn Right");
-        //previousMove = 1; //0 for left, 1 for right
       }
-    // } else if (PrevturnTime-millis() <= 2000) {
-    //   if (previousMove == 0) {
-    //     full_turn_left(timedelay);
-    //     previousMove = 0; //0 for left, 1 for right
-    //   } else {
-    //     full_turn_right(timedelay);
-    //     previousMove = 1; //0 for left, 1 for right
-    //   }
     } else { //A large wall in front of the robot
-      //stop(timedelay);
-      //Serial.print("Wall\n");
       digitalWrite(LED2,LOW);
       digitalWrite(LED3,HIGH); //Red stopped
       if (TopLeft<TopRight) {
         full_turn_left(timedelay);
         Serial.print("Wall Turn Left");
-        //previousMove = 0; //0 for left, 1 for right
       } else {
         full_turn_right(timedelay);
-        Serial.print("Wall Turn Left");
-        //previousMove = 1; //0 for left, 1 for right
+        Serial.print("Wall Turn Right");
       }
     }
     Serial.println();
@@ -636,13 +577,11 @@ void loop() {
     }
 
     if ((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50)) { //If weight found condition is still satisfied
-      //half_forward(timedelay);
       if ((MiddleRight - BottomRight)<(MiddleLeft - BottomLeft) && (BottomLeft>20)) {
         forward_left(timedelay); //should turn to the closer sensor where the weight is
         Serial.print("To weight left");
       } else if ((MiddleRight - BottomRight)>(MiddleLeft - BottomLeft) && (BottomRight>20)) {
         forward_right(timedelay);
-        //full_forward(timedelay);
         Serial.print("To weight right");
       } else if ((BottomRight<20 || BottomLeft<20)  && (MiddleRight> 20 && MiddleLeft> 20)) { //If weight is within 20cm from bottom sensors
         Serial.print("20 cm from weight");
@@ -665,21 +604,24 @@ void loop() {
           if (ElectroMagnet1On == true) { //Relevant Electromagnet on
             if (ElectroMagnet2On == true) {
               if (ElectroMagnet3On == false) {
-                analogWrite(ElectroMagnet3Pin, 50);  //the front 3rd electromagnet
+                analogWrite(ElectroMagnet3Pin, 90*255);  //the front 3rd electromagnet
                 ElectroMagnet3On = true;
                 //Serial.print("Magnet 3 on\n");
-                programState=0;
+                
               }
               //Serial.print("Magnet 2/3 on\n");
+              programState=0;
+            } else {
+              analogWrite(ElectroMagnet2Pin, 0.9*255); //90% duty cycle
+              ElectroMagnet2On = true;
+              //Serial.print("Magnet 2 on\n");
             }
-            analogWrite(ElectroMagnet2Pin, 50); //50% duty cycle
-            ElectroMagnet2On = true;
-            //Serial.print("Magnet 2 on\n");
             programState=0;
+          } else {
+            analogWrite(ElectroMagnet1Pin, 90*255);
+            ElectroMagnet1On = true;
+            //Serial.print("Magnet 1 on\n");
           }
-          analogWrite(ElectroMagnet1Pin, 50);
-          ElectroMagnet1On = true;
-          //Serial.print("Magnet 1 on\n");
           programState=0;
         }
         digitalWrite(MAdirpin,HIGH); //Steppers up
@@ -694,7 +636,7 @@ void loop() {
           delay(1);
         }
       }
-    } else { //If it looses the weight
+    } else { //If it looses the weight on the sensors
       programState = 0;
     } 
     Serial.println(); //Next line
@@ -779,31 +721,6 @@ void loop() {
   // Serial.print("  OrienZ: ");
   // Serial.print(AverageOrienZ);
   // Serial.print("\n");
-
-
-
-
-
-
-
-
-  //Looks for walls with TOFs
-  // for (uint8_t i = 0; i < sensorCountL0; i++)
-  // {
-  //   Serial.print(sensorsL0[i].readRangeContinuousMillimeters());
-  //   if (sensorsL0[i].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
-  //   Serial.print('\t');
-  // }
-
-  // for (uint8_t i = 0; i < sensorCountL1; i++)
-  // {
-  //   Serial.print(sensorsL1[i].read());
-  //   if (sensorsL1[i].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
-  //     Serial.print('\t');
-  // }
-
-        //If TOFs on side both have objects and ones on front have object in front, then it rorates 180 degrees and heads out
-//      }
 
 
 
