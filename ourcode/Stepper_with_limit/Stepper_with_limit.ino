@@ -5,23 +5,18 @@
 const byte SX1509_ADDRESS = 0x3E;  // SX1509 I2C address
 SX1509 io; // Create an SX1509 object to be used throughout
 
+//STEPPER MOTOR SETUP:
+//001000
+//000000101
 
 int MAdirpin = 30;
 int MAsteppin = 31;
 int MBdirpin = 32;
 int MBsteppin = 33;
-int MElectro = 26;
-int MElectro1 = 24;
-
-uint32_t num_steps = 5000;
 const byte SX1509_AIO6 = 6; 
-const byte SX1509_AIO5 = 5; 
-const byte SX1509_AIO4 = 4; 
-
-
-
-bool magnets_on = 0;
-
+int MElectro1 = 24;
+int MElectro2 = 25;
+int MElectro3 = 26;
 
 void setup()
 {   
@@ -39,80 +34,61 @@ void setup()
   pinMode(MAsteppin,OUTPUT);
   pinMode(MBdirpin,OUTPUT);
   pinMode(MBsteppin,OUTPUT);
-  pinMode(MElectro,OUTPUT);
+
   pinMode(MElectro1,OUTPUT);
+  pinMode(MElectro2,OUTPUT);
+  pinMode(MElectro3,OUTPUT);
+
   io.pinMode(SX1509_AIO6, INPUT);
-  io.pinMode(SX1509_AIO5, INPUT);
-  io.pinMode(SX1509_AIO4, INPUT);
-
-}
-
-void go_down(uint32_t steps)
-{
-  digitalWrite(MAdirpin,HIGH);
-  digitalWrite(MBdirpin,HIGH);
   
-  for(uint32_t j = 0;j < steps; j++)
-  {
-    delayMicroseconds(20);
-    digitalWrite(MAsteppin,LOW);
-    digitalWrite(MBsteppin,LOW);
-    delayMicroseconds(20);
-    digitalWrite(MAsteppin,HIGH);
-    digitalWrite(MBsteppin,HIGH);
-    delayMicroseconds(20);
-  }
-  Serial.println("Ended move");
+  digitalWrite(MElectro1,HIGH);
+  digitalWrite(MElectro2,HIGH);
+  digitalWrite(MElectro3,HIGH);
+
 }
 
-void go_up(uint32_t steps)
-{
+void go_down(void) {
+  
   digitalWrite(MAdirpin,LOW);
   digitalWrite(MBdirpin,LOW);
   
-  for(uint32_t j = 0;j < steps; j++)
+  for(int j=0;j<=1000;j++)            //Move 1000 steps down
   {
     delayMicroseconds(20);
     digitalWrite(MAsteppin,LOW);
     digitalWrite(MBsteppin,LOW);
-
-    delayMicroseconds(20);
+    delayMicroseconds(100);
     digitalWrite(MAsteppin,HIGH);
     digitalWrite(MBsteppin,HIGH);
-    delayMicroseconds(20);
+    delayMicroseconds(100);
   }
-  Serial.println("Ended move");
-
 }
+
+void go_up(void) {
+  digitalWrite(MAdirpin,HIGH);
+  digitalWrite(MBdirpin,HIGH);
+
+    for(int j=0;j<=1000;j++)            //Move 1000 steps up
+  {
+    delayMicroseconds(20);
+    digitalWrite(MAsteppin,LOW);
+    digitalWrite(MBsteppin,LOW);
+    delayMicroseconds(100);
+    digitalWrite(MAsteppin,HIGH);
+    digitalWrite(MBsteppin,HIGH);
+    delayMicroseconds(100);
+  }
+}
+
 void loop()
 {
-  bool bAIO6;
-
-  char  sOut[100];
-  bAIO6=io.digitalRead(SX1509_AIO6);
   
-  if(!bAIO6) {
-    go_down(100);
-  }
+  bool bAIO6=io.digitalRead(SX1509_AIO6);
 
-  bool bAIO4;
-  bAIO4=io.digitalRead(SX1509_AIO4);
-
-  if(!bAIO4) {
-    go_up(100);
-  }
-
-
-  //Set direction for all channels
-  bool bAIO5;
-  bAIO5=io.digitalRead(SX1509_AIO5);
-  
-  if(!bAIO5) {
-    digitalWrite(MElectro1,LOW);
-    digitalWrite(MElectro,LOW);
+  if(bAIO6) {
+    go_down();
   } else {
-    digitalWrite(MElectro1,HIGH);
-    digitalWrite(MElectro,HIGH);
+    go_up();
   }
 
 
