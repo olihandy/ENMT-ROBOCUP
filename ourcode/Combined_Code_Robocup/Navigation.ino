@@ -442,9 +442,9 @@ void loop() {
   //State machine
   if (((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50) || (InductionDetected == 1)) && (elapsed_time <= 100)) { //Object like weight is found
     programState = 2;
-  } else if ((TopLeft < 20 || TopRight < 20 || TopMiddle < 20) && (elapsed_time <= 100)) {
+  } else if ((TopLeft < 20 || TopRight < 20 || TopMiddle < 20) && (elapsed_time <= 100)) { //state to turn
     programState = 1;
-  } else if ((elapsed_time > 100) || (ElectroMagnet1On && ElectroMagnet2On && ElectroMagnet3On)) {
+  } else if ((elapsed_time > 100) || (ElectroMagnet1On && ElectroMagnet2On && ElectroMagnet3On)) { //state to go home
     programState = 3;
   }
   Serial.print(elapsed_time);
@@ -546,11 +546,13 @@ void loop() {
         full_turn_left(timedelay);
         Serial.print("Slab Turn Left");
       }
-    } else if (TopLeft < 20 && TopMiddle < 20 && TopRight < 20) { //Solid Wall ahead
+    } else if (TopLeft < 20 && TopMiddle < 20 && TopRight < 20) { //Solid Wall ahead, IMU will do this
       if (TopLeft<TopRight) {
-        full_turn_right(timedelay*5);
+        full_turn_right(timedelay);
+        Serial.print("Solid Wall Turn Right");
       } else {
-        full_turn_left(timedelay*5);
+        full_turn_left(timedelay);
+        Serial.print("Solid Wall Turn Left");
       }
       Serial.print("180 degree turn");
     } else if (TopLeft < 20 && TopMiddle > 20 && TopRight < 20) {
