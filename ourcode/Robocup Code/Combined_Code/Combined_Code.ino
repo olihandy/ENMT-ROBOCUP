@@ -28,59 +28,11 @@ const int LED4 = 5;  //Green on bottom set
 
 int timedelay = 10;  //time in milliseconds, do not comment this out
 
-//IMU setup
-
-// /* This driver uses the Adafruit unified sensor library (Adafruit_Sensor),
-//    which provides a common 'type' for sensor data and some helper functions.
-
-//    To use this driver you will also need to download the Adafruit_Sensor
-//    library and include it in your libraries folder.
-
-//    You should also assign a unique ID to this sensor for use with
-//    the Adafruit Sensor API so that you can identify this particular
-//    sensor in any data logs, etc.  To assign a unique ID, simply
-//    provide an appropriate value in the constructor below (12345
-//    is used by default in this example).
-
-//    Connections
-//    ===========
-//    Connect SCL to analog 5
-//    Connect SDA to analog 4
-//    Connect VDD to 3.3-5V DC
-//    Connect GROUND to common ground
-
-//    History
-//    =======
-//    2015/MAR/03  - First release (KTOWN)
-// */
-
-// /* Set the delay between fresh samples */
-// uint16_t BNO055_SAMPLERATE_DELAY_MS = 100;
-
-// // Check I2C device address and correct line below (by default address is 0x29 or 0x28)
-// //                                   id, address
-// // Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28); //searches to find IMU
-// Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire1);
-
-// //Color Sensor setup
-// #include <Adafruit_TCS34725.h>
-
-// Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
-
-
 
 void setup()  //Need one setup function
 {
 
 }
-
-
-//=========================================================================================================================================================================================================================================================
-//=========================================================================================================================================================================
-//========================================================================================================================================================================================================================================================
-//=========================================================================================================================================================================
-//========================================================================================================================================================================================================================================================
-
 
 void loop() {
   
@@ -95,11 +47,6 @@ void loop() {
     programState = 3;
   }
   
-
-  // if (digitalRead(CollectPin)==1) { //For collection if weights still have to be in robot
-  //   programState=4;
-  //   
-  // }
   
 
   if (programState == 1) {
@@ -147,126 +94,53 @@ void loop() {
   Serial.println(); //Next line
 }
 
+void Turning(int TopLeft, int TopMiddle, int TopRight) {
+  digitalWrite(LED1,LOW);
+  if (TopLeft < 20 && TopMiddle > 20 && TopRight > 20) { //&& PrevturnTime-millis()>2000
+    full_turn_right(timedelay);
+    digitalWrite(LED3,LOW);
+    digitalWrite(LED2,HIGH); //Yellow
+    Serial.print(" Right");
+  } else if (TopLeft > 20 && TopMiddle > 20 && TopRight < 20) { //&& PrevturnTime-millis()>2000
+    full_turn_left(timedelay);
+    digitalWrite(LED3,LOW);
+    digitalWrite(LED2,HIGH); //YELLOW
+    Serial.print(" Left");
+  } else if (TopLeft > 20 && TopMiddle > 20 && TopRight > 20) { //open space
+    digitalWrite(LED3,LOW); //off
+    digitalWrite(LED2,LOW); //off
+    programState = 0;
+  } else if (TopLeft > 20 && TopMiddle < 20 && TopRight > 20) { //A thin slab of wall in front of the robot
+    digitalWrite(LED3,LOW); //off
+    digitalWrite(LED2,HIGH); //off
+    if (TopLeft<TopRight) { 
+      full_turn_right(timedelay);
+      Serial.print("Slab Turn Right");
+    } else {
+      full_turn_left(timedelay);
+      Serial.print("Slab Turn Left");
+    }
+  } else if (TopLeft < 20 && TopMiddle < 20 && TopRight < 20) { //Solid Wall ahead, IMU will do this
+    if (TopLeft<TopRight) {
+      full_turn_right(timedelay);
+      Serial.print("Solid Wall Turn Right");
+    } else {
+      full_turn_left(timedelay);
+      Serial.print("Solid Wall Turn Left");
+    }
+    Serial.print("180 degree turn");
+  } else if (TopLeft < 20 && TopMiddle > 20 && TopRight < 20) {
+    full_forward(timedelay);
+    Serial.print("Space in Between");
+  } else { //A large wall in front of just more than half of the robot
+    digitalWrite(LED2,LOW);
+    digitalWrite(LED3,HIGH); //Red stopped
+    if (TopLeft<TopRight) {
+      full_turn_right(timedelay);
+      Serial.print("Wall Turn Right");
+    } else {
+      full_turn_left(timedelay);
+      Serial.print("Wall Turn Left");
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- //Seconds since program has been running
-  //Getting current acceleration and therefore position:
-  //CurrentOrienX = SENSOR_TYPE_ACCELEROMETER->orientation.x
-  //CurrentOrienY = SENSOR_TYPE_ACCELEROMETER->orientation.y
-
-  //Have weighted average of IMU and Encoder
-
-
-  // for (uint16_t element=1; element<49; element++){                 //shifting the window of detected accelerations for X
-  //   if (element == 48) {
-  //     Xposlist[element] = 0;
-  //   } else {
-  //     Xposlist[element+1] = Xposlist[element+1];
-  //   }
-  // }
-  // IMUGetPos();
-  // Xposlist[0] = acc[0];
-  // for (uint16_t averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect x accelerations
-  //   AverageAccelerationX += Xposlist[averagingelement];
-  //   AverageAccelerationX = AverageAccelerationX / 50;
-  // }
-
-  // for (uint16_t element = 1; element < 49; element++) {  //shifting the window of detected accelerations for Y
-  //   if (element == 48) {
-  //     Yposlist[element] = 0;
-  //   } else {
-  //     Yposlist[element + 1] = Yposlist[element + 1];
-  //   }
-  // }
-  // Yposlist[0] = acc[1];
-  // for (uint16_t averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect y accelerations
-  //   AverageAccelerationY += Yposlist[averagingelement];
-  //   AverageAccelerationY = AverageAccelerationY / 50;
-  // }
-
-  // for (uint16_t element = 1; element < 49; element++) {  //shifting the window of detected accelerations for Z orientations
-  //   if (element == 48) {
-  //     OrienZlist[element] = 0;
-  //   } else {
-  //     OrienZlist[element + 1] = OrienZlist[element + 1];
-  //   }
-  // }
-  // OrienZlist[0] = ori[2];
-  // for (uint16_t averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect Z orientations
-  //   AverageOrienZ += OrienZlist[averagingelement];
-  //   AverageOrienZ = AverageOrienZ / 50;
-  // }
-
-  // int Timedif = millis()/1000 - prevtime;
-  // Serial.print(Timedif);
-  // prevtime = millis()/1000;  //Time difference for integration
-
-  // CurrentposX += (AverageAccelerationX * pow(Timedif * 50, 2));  //Getting the x position from moving average filter, need pow function in Arduino for powers
-  // Serial.print("X: ");
-  // Serial.print(CurrentposX);
-  // CurrentposY += (AverageAccelerationY * pow(Timedif * 50, 2));  //y
-  // Serial.print("Y: ");
-  // Serial.print(CurrentposY);
-  // CurrentOrienZ = AverageOrienZ;  //orientation in Z
-  // Serial.print("  OrienZ: ");
-  // Serial.print(AverageOrienZ);
-  // Serial.print("\n");
-
-
-
-
-        //If robot is against a wall where does it go? The following is future code for later if two ultrasonic sensors are used
-        //int directionCheckarray[20] = {0}; //An array of distances as the robot rotates when it detects a wall
-        //int8_t it_num = 0;
-        //int32_t MaxCM = 0;
-        //int8_t MaxCMElement = 0;
-        //if (TopLeft>TopRight) {
-          //full_turn_left(timedelay);
-          //Get IMU heading
-          //if IMU heading is less than 360 degrees
-            //A_read();
-            //B_read();
-            //directionCheckarray[it_num] = [(TopLeft+TopRight)/2];
-            //if ((TopLeft+TopRight)/2 > (MaxCMElement)){
-              //MaxCM = (TopLeft+TopRight)/2;
-              //MaxCMElement = TopLeft;
-            //}
-            //it_num++;
-            //full_turn_left(timedelay);
-          //for (i=0; i<(it_num-MaxCMElement), i++){
-            //full_turn_right(timedelay);
-          //}
-        //} else {
-          //full_turn_right(timedelay);
-        //}
-        //programState = 0;
-
-      //Detecting weights using lower TOF:
-      //If an object is found closer than the ultrasonic distance, it is an interrupt with a higher proiority than the turning process, will stop rotating and go forward at full power, then leaves the interruyptr
-
-  //PrevPositionX = CurrentposX;
-  //PrevOrienZ = CurrentOrienZ;
-//}
-
-
-
-
-//sensors_event_t orientationData;
-//bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER);
-//or_x = orientationData->orientation.x
-//or_y = orientationData->orientation.y
-//or_z = orientationData->orientation.z
