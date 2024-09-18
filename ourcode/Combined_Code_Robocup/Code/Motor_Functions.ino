@@ -17,7 +17,6 @@ void setup() {
   //Motors
   myservoA.attach(7);  // attaches the servo  to the servo object using pin 0
   myservoB.attach(8);  // attaches the servo  to the servo object using pin 1
-
   Serial.println("Configured DC Motors");
 }
 
@@ -73,11 +72,11 @@ void full_turn_left(int timedelay) {
   delay(timedelay);
 }
 
-
 void forward_left(int timedelay) {
   myservoA.writeMicroseconds(full_forward_speed);
   myservoB.writeMicroseconds(half_forward_speed);
 }
+
 
 void Turning(int TopLeft, int TopMiddle, int TopRight) {
   digitalWrite(LED1,LOW);
