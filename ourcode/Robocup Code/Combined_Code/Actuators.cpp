@@ -1,6 +1,4 @@
-#include <stdio.h>
-#include <Servo.h>
-#include <Wire.h> 
+#include "Actuators.h"
 
 //Motor setup
 Servo myservoA, myservoB;  // create servo object to control a servo
@@ -9,7 +7,7 @@ int full_reverse_speed = 1900;
 int full_forward_speed = 1100;
 int half_reverse_speed = 1750;
 int half_forward_speed = 1250;
-
+int timedelay = 100;
 
 //STEPPER MOTOR SETUP:
 //001000
@@ -20,9 +18,7 @@ int MAdirpin = 32;
 int MAsteppin = 33;
 int MBdirpin = 30;
 int MBsteppin = 31;
-
-
-void setup() {
+void setupActuators() {
   //Motors
   myservoA.attach(0);  // attaches the servo  to the servo object using pin 0
   myservoB.attach(1);  // attaches the servo  to the servo object using pin 1
@@ -126,11 +122,3 @@ void go_up(void) {
   }
 }
 
-void loop() {
-  go_down();
-  stop(100);
-  full_turn_left(1000);
-  go_up();
-  stop(100);
-  full_turn_right(1000);
-}

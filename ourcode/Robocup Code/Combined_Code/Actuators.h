@@ -1,27 +1,33 @@
-// Motor_Functions.h
+// Actuators.h
 
-#ifndef MOTOR_FUNCTIONS_H
-#define MOTOR_FUNCTIONS_H
+#ifndef ACTUATORS_H
+#define ACTUATORS_H
 
+#include <stdio.h>
 #include <Servo.h>
+#include <Wire.h> 
 
-// Servo motor variables
-extern Servo myservoA, myservoB;  // Servo objects to control motors
-extern int stop_speed;
+//Motor setup
+extern Servo myservoA, myservoB;  // create servo object to control a servo
+extern int stop_speed;     // Variable to change direction of movement, 1500 = stop, 1900 = full speed foward, 1100 = full back
 extern int full_reverse_speed;
 extern int full_forward_speed;
 extern int half_reverse_speed;
 extern int half_forward_speed;
+extern int timedelay;
 
-// Stepper motor variables
-extern int num_steps;
+//STEPPER MOTOR SETUP:
+//001000
+//000000101
+
+extern int num_steps; // To be optimised
 extern int MAdirpin;
 extern int MAsteppin;
 extern int MBdirpin;
 extern int MBsteppin;
 
 // Function declarations
-void setup_motors();
+void setupActuators();
 void full_reverse(int timedelay);
 void stop(int timedelay);
 void full_forward(int timedelay);
@@ -34,4 +40,4 @@ void forward_left(int timedelay);
 void go_down(void);
 void go_up(void);
 
-#endif //MOTOR_FUNCTIONS_H
+#endif //ACTUATORS_H

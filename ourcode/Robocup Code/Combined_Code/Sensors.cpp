@@ -1,14 +1,8 @@
-#include <Wire.h>  
-#include <VL53L1X.h>
-#include <VL53L0X.h>
-#include <SparkFunSX1509.h>
-#include <stdio.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BNO055.h>
-#include <utility/imumaths.h>
-#include "Print_Readings.h"
+#include "Sensors.h"
 
+int programState = 1;
 int elapsed_time = 99;
+
 //ELECTROMAGNET
 const int ElectroMagnet1Pin = 25;
 const int ElectroMagnet2Pin = 24;
@@ -27,24 +21,27 @@ const int numInductiveSensors = 2;
 
 //TOF
 const byte SX1509_ADDRESS = 0x3F;
-#define VL53L0X_ADDRESS_START 0x30
-#define VL53L1X_ADDRESS_START 0x35
+const int VL53L0X_ADDRESS_START = 0x30;
+const int VL53L1X_ADDRESS_START = 0x35;
 
 //number of sensors in system.
 const uint8_t sensorCountL1 = 3;
 const uint8_t sensorCountL0 = 4; 
+
 // The Arduino pin connected to the XSHUT pin of each sensor.
 const uint8_t xshutPinsL1[sensorCountL1] = {0, 1, 2};
 const uint8_t xshutPinsL0[sensorCountL0] = {3, 4, 5, 6};
 
-SX1509 io;  // Create an SX1509 object to be used throughout
-VL53L1X sensorsL1[sensorCountL1];
-VL53L0X sensorsL0[sensorCountL0];
+ SX1509 io;  // Create an SX1509 object to be used throughout
+ VL53L1X sensorsL1[sensorCountL1];
+ VL53L0X sensorsL0[sensorCountL0];
 
 uint16_t TopRight, TopLeft, TopMiddle, MiddleLeft, MiddleRight, BottomLeft, BottomRight;
 const int numReadings = 7;
 
-void setup() {
+
+
+void setupSensors() {
   // put your setup code here, to run once:
   Serial.print("Setup");
 
@@ -53,11 +50,11 @@ void setup() {
   pinMode(ElectroMagnet2Pin, OUTPUT);
   pinMode(ElectroMagnet3Pin, OUTPUT);  
   
-  //Induction sensor
+  // Induction sensor
   pinMode(FrontInductionPin, INPUT);
   pinMode(BackInductionPin, INPUT);
 
-  //TOF
+  // TOF
   if (!io.begin(SX1509_ADDRESS)) {
     Serial.println("Failed to to talk to IO Expander for TOFs");
     while (1) {};
@@ -204,22 +201,5 @@ void PrintInformation(uint16_t TOFreadings[], bool electromagnetStates[], bool i
   Serial.print("\n");
 }
 
-void loop() {
-  // Get the readings from the sensors
-  uint16_t TOFreadings[numReadings];
-  bool electromagnetStates[numElectroMagnets];
-  bool inductionSensorStates[numInductiveSensors];
-  // Get sensor readings and store them in the array
-  GetTOF(TOFreadings);
-  GetElectroMagnet(electromagnetStates);
-  GetInduction(inductionSensorStates);
 
-  // Example program state, you can update this according to your logic
-  int programState = 0;
-
-  // Call PrintInformation with the array of readings and program state
-  PrintInformation(TOFreadings, electromagnetStates, inductionSensorStates, programState);
-
-  delay(10); // Adjust delay as needed
-}
 
