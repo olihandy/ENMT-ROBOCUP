@@ -8,11 +8,9 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
-#include <Induction_Detected.h>
-#include <Motor_Functions.h>
-#include <Print_Readings.h>
-#include <ScoringMode.h>
-#include <Sensor_Readings.h>
+#include <C:\Users\aos30\OneDrive - University of Canterbury\University\2024\ENMT ENME 301\Robocup\ENMT-ROBOCUP\ourcode\Robocup Code\Combined_Code\Sensors.h>
+#include <C:\Users\aos30\OneDrive - University of Canterbury\University\2024\ENMT ENME 301\Robocup\ENMT-ROBOCUP\ourcode\Robocup Code\Combined_Code\Actuators.h>
+#include <C:\Users\aos30\OneDrive - University of Canterbury\University\2024\ENMT ENME 301\Robocup\ENMT-ROBOCUP\ourcode\Robocup Code\Combined_Code\Induction_Detected.h>
 
 double elapsed_time = 0;
 const double two_minutes_in_seconds = 120.0;
