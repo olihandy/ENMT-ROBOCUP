@@ -6,7 +6,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
-
+int elapsed_time = 99;
 //ELECTROMAGNET
 const int ElectroMagnet1Pin = 25;
 const int ElectroMagnet2Pin = 24;
@@ -14,13 +14,13 @@ const int ElectroMagnet3Pin = 14;
 bool ElectroMagnet1On = false;
 bool ElectroMagnet2On = false;
 bool ElectroMagnet3On = false;
+const int numElectroMagnets = 3;
 
 
 //INDUCTION
-const int FrontInductionPin = 27; //Induction sensor pin to check
+const int FrontInductionPin = 27; 
 const int BackInductionPin = 26;
-bool FrontInductionDetected = 0;
-bool BackInductionDetected = 0;
+const int numInductiveSensors = 2;
 
 
 //TOF
@@ -33,7 +33,7 @@ const uint8_t sensorCountL1 = 3;
 const uint8_t sensorCountL0 = 4; 
 // The Arduino pin connected to the XSHUT pin of each sensor.
 const uint8_t xshutPinsL1[sensorCountL1] = {0, 1, 2};
-const uint8_t xshutPinsL0[sensorCountL0] = {3, 4, 5, 6}
+const uint8_t xshutPinsL0[sensorCountL0] = {3, 4, 5, 6};
 
 SX1509 io;  // Create an SX1509 object to be used throughout
 VL53L1X sensorsL1[sensorCountL1];
@@ -53,7 +53,7 @@ void setup() {
   
   //Induction sensor
   pinMode(FrontInductionPin, INPUT);
-  pinMode(BaclInductionPin, INPUT);
+  pinMode(BackInductionPin, INPUT);
 
   //TOF
   if (!io.begin(SX1509_ADDRESS)) {
@@ -118,55 +118,80 @@ void setup() {
 }
 
 void GetTOF(uint16_t TOFreadings[]) {
-  readings[0] = sensorsL1[0].read() / 10;  // TopRight
-  readings[1] = sensorsL1[1].read() / 10;  // TopLeft
-  readings[2] = sensorsL1[2].read() / 10;  // TopMiddle
-  readings[3] = sensorsL0[0].readRangeContinuousMillimeters() / 10;  // MiddleLeft
-  readings[4] = sensorsL0[1].readRangeContinuousMillimeters() / 10;  // MiddleRight
-  readings[5] = sensorsL0[2].readRangeContinuousMillimeters() / 10;  // BottomLeft
-  readings[6] = sensorsL0[3].readRangeContinuousMillimeters() / 10;  // BottomRight
+  TOFreadings[0] = sensorsL1[0].read() / 10;
+  TOFreadings[1] = sensorsL1[1].read() / 10;
+  TOFreadings[2] = sensorsL1[2].read() / 10;
+  TOFreadings[3] = sensorsL0[0].readRangeContinuousMillimeters() / 10;
+  TOFreadings[4] = sensorsL0[1].readRangeContinuousMillimeters() / 10;
+  TOFreadings[5] = sensorsL0[2].readRangeContinuousMillimeters() / 10;
+  TOFreadings[6] = sensorsL0[3].readRangeContinuousMillimeters() / 10;
 }
 
-void PrintInformation(uint16_t TOFreadings[], int programState) {
-  Serial.print("Top L ");
-  Serial.print(readings[1]);
+void GetElectroMagnet(bool electromagnetStates[]) {
+  electromagnetStates[0] = ElectroMagnet1On;
+  electromagnetStates[1] = ElectroMagnet2On;
+  electromagnetStates[2] = ElectroMagnet3On;
+}
+
+void GetInduction(bool inductionSensorStates[]) {
+  inductionSensorStates[0] = !digitalRead(FrontInductionPin);
+  inductionSensorStates[1] = !digitalRead(BackInductionPin);
+}
+
+void PrintInformation(uint16_t TOFreadings[], bool electromagnetStates[], bool inductionSensorStates[],  int programState) {
+  Serial.print("L ");
+  Serial.print(TOFreadings[1]);
   if (sensorsL1[0].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
-  Serial.print('\t');
+  Serial.print("\t");
 
   Serial.print("M ");
-  Serial.print(readings[2]);
+  Serial.print(TOFreadings[0]);
   if (sensorsL1[2].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
-  Serial.print('\t');
+  Serial.print("\t");
 
   Serial.print("R ");
-  Serial.print(readings[0]);
+  Serial.print(TOFreadings[2]);
   if (sensorsL1[1].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
-  Serial.print('\t');
+  Serial.print("\t");
 
   Serial.print("Mid  R ");
-  Serial.print(readings[4]);
+  Serial.print(TOFreadings[4]);
   if (sensorsL0[0].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
-  Serial.print('\t');
+  Serial.print("\t");
 
   Serial.print("L ");
-  Serial.print(readings[3]);
+  Serial.print(TOFreadings[3]);
   if (sensorsL0[1].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
-  Serial.print('\t');
+  Serial.print("\t");
 
   Serial.print("Bottom  R ");
-  Serial.print(readings[6]);
+  Serial.print(TOFreadings[6]);
   if (sensorsL0[2].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
-  Serial.print('\t');
+  Serial.print("\t");
 
   Serial.print("L ");
-  Serial.print(readings[5]);
+  Serial.print(TOFreadings[5]);
   if (sensorsL0[3].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
-  Serial.print('\t');
+  Serial.print("\t");
 
 
-  if(programState == 0) { //printing stuff relating to task
+  Serial.print(electromagnetStates[0]);
+  Serial.print(electromagnetStates[1]);
+  Serial.print(electromagnetStates[2]);
+  Serial.print("\t");
+
+  Serial.print("Front Induction Sensor: ");
+  Serial.print(inductionSensorStates[0]);
+  Serial.print("\t");  
+  Serial.print("Back Induction Sensor: ");
+  Serial.print(inductionSensorStates[1]);
+  Serial.print("\t");
+
+  Serial.print(elapsed_time);
+  Serial.print("\t");
+
+  if(programState == 0) {
     Serial.print("Moving Forward");
-    full_forward(timedelay); //can go full forward
   } else if(programState == 1) {
     Serial.print("Turning");
   } else if(programState == 2) {
@@ -174,33 +199,24 @@ void PrintInformation(uint16_t TOFreadings[], int programState) {
   } else {
     Serial.print("Going Home");
   } 
-
-  Serial.print("\t");
-
-  Serial.print(ElectroMagnet1On);
-  Serial.print("\t");
-  Serial.print(ElectroMagnet2On);
-  Serial.print("\t");
-  Serial.print(ElectroMagnet3On);
-  Serial.print("\t");
-
-  Serial.print(elapsed_time);
-  Serial.print("\t");
-  Serial.print("       ");
+  Serial.print("\n");
 }
 
 void loop() {
   // Get the readings from the sensors
   uint16_t TOFreadings[numReadings];
-
+  bool electromagnetStates[numElectroMagnets];
+  bool inductionSensorStates[numInductiveSensors];
   // Get sensor readings and store them in the array
-  GetTOF(readings);
+  GetTOF(TOFreadings);
+  GetElectroMagnet(electromagnetStates);
+  GetInduction(inductionSensorStates);
 
   // Example program state, you can update this according to your logic
   int programState = 0;
 
   // Call PrintInformation with the array of readings and program state
-  PrintInformation(TOFreadings, programState);
+  PrintInformation(TOFreadings, electromagnetStates, inductionSensorStates, programState);
 
   delay(10); // Adjust delay as needed
 }
