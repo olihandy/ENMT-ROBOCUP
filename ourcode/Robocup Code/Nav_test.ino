@@ -164,7 +164,13 @@ void setup()  //Need one setup function
   pinMode(InductionPin, INPUT);
 
   //Color sensor
-  if (tcs.begin()) 
+  Serial.begin(9600);
+  Serial.println("Color View Test!");
+
+  Wire1.begin();
+  Wire.begin();
+
+  if (tcs.begin(41, &Wire1)) 
   {
     Serial.println("Found sensor");
   } else 
