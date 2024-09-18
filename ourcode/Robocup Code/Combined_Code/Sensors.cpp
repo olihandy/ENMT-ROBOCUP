@@ -39,7 +39,9 @@ const uint8_t xshutPinsL0[sensorCountL0] = {3, 4, 5, 6};
 uint16_t TopRight, TopLeft, TopMiddle, MiddleLeft, MiddleRight, BottomLeft, BottomRight;
 const int numReadings = 7;
 
-
+uint16_t TOFreadings[numReadings];
+bool electromagnetStates[numElectroMagnets];
+bool inductionSensorStates[numInductiveSensors];
 
 void setupSensors() {
   // put your setup code here, to run once:
@@ -137,7 +139,11 @@ void GetInduction(bool inductionSensorStates[]) {
   inductionSensorStates[1] = !digitalRead(BackInductionPin);
 }
 
-void PrintInformation(uint16_t TOFreadings[], bool electromagnetStates[], bool inductionSensorStates[],  int programState) {
+void PrintInformation() {
+  GetTOF(TOFreadings);
+  GetElectroMagnet(electromagnetStates);
+  GetInduction(inductionSensorStates);
+
   Serial.print("L ");
   Serial.print(TOFreadings[1]);
   if (sensorsL1[0].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }

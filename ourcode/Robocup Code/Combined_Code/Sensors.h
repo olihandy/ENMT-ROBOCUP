@@ -49,11 +49,15 @@ extern VL53L0X sensorsL0[];
 extern uint16_t TopRight, TopLeft, TopMiddle, MiddleLeft, MiddleRight, BottomLeft, BottomRight;
 extern const int numReadings;
 
+extern uint16_t TOFreadings[];
+extern bool electromagnetStates[];
+extern bool inductionSensorStates[];
+
 // Function prototypes
 void setupSensors();
 void GetTOF(uint16_t TOFreadings[]);
 void GetElectroMagnet(bool electromagnetStates[]);
 void GetInduction(bool inductionSensorStates[]);
-void PrintInformation(uint16_t TOFreadings[], bool electromagnetStates[], bool inductionSensorStates[], int programState);
+void PrintInformation();
 
 #endif  //PRINT_READINGS_H
