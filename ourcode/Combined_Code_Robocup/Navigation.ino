@@ -134,10 +134,10 @@ int timedelay = 10;  //time in milliseconds, do not comment this out
 // // Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28); //searches to find IMU
 // Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire1);
 
-// //Color Sensor setup
-// #include <Adafruit_TCS34725.h>
+//Color Sensor setup
+#include <Adafruit_TCS34725.h>
 
-// Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
 
 
 
@@ -164,7 +164,14 @@ void setup()  //Need one setup function
   pinMode(InductionPin, INPUT);
 
   //Color sensor
-  //digitalWrite(ColorOnPin,HIGH);
+  if (tcs.begin()) 
+  {
+    Serial.println("Found sensor");
+  } else 
+  {
+    Serial.println("No TCS34725 found ... check your connections");
+    while (1); // halt!
+  }
 
   //TOF
   // while (!Serial) {}    NO USB FOR RUNNING CODE
@@ -278,6 +285,36 @@ void setup()  //Need one setup function
   Serial.print("End of setup");
 }
 
+float colorSensorDetect(void) {
+  uint16_t clear, red, green, blue;
+
+  tcs.setInterrupt(false);      // turn on LED
+
+  delay(60);  // takes 50ms to read 
+  
+  tcs.getRawData(&red, &green, &blue, &clear);
+
+  tcs.setInterrupt(true);  // turn off LED
+  
+  Serial.print("Clear:\t"); Serial.print(clear);
+  Serial.print("\tR:\t"); Serial.print(red);
+  Serial.print("\tG:\t"); Serial.print(green);
+  Serial.print("\tB:\t"); Serial.print(blue);
+
+  // Figure out some basic hex code for visualization
+  uint32_t sum = clear;
+  float r, g, b;
+  r = red; r /= sum;
+  g = green; g /= sum;
+  b = blue; b /= sum;
+  r *= 256; g *= 256; b *= 256;
+  Serial.print("\t\t"); //t is space
+  Serial.print((int)r, HEX); Serial.print("\t"); Serial.print((int)g, HEX); Serial.print("\t"); Serial.print((int)b, HEX); //Need to move these to modularized code
+  Serial.println();
+  float returnlist[] = {r, g, b};
+  return *returnlist;
+}
+
 void full_reverse(int timedelay) {
   myservoA.writeMicroseconds(full_reverse_speed);
   myservoB.writeMicroseconds(full_reverse_speed);
@@ -336,10 +373,6 @@ void forward_left(int timedelay) {
   myservoB.writeMicroseconds(half_forward_speed);
 }
 
-//int colorRead() {
-
-//}
-
 // double printEvent(sensors_event_t* event) { //problems getting right event
 //   double x = -1000000, y = -1000000 , z = -1000000; //dumb values, easy to spot problem
 //   if (event->type == SENSOR_TYPE_ORIENTATION) {
@@ -367,9 +400,9 @@ void forward_left(int timedelay) {
 //   return *XYZList;
 // }
 
-long microsecondsToCentimeters(long microseconds) {
-  return microseconds / 29 / 2;
-}
+// long microsecondsToCentimeters(long microseconds) {
+//   return microseconds / 29 / 2;
+// }
 
 // sensors_event_t orientationData , accelerometerData; //, angVelocityData , linearAccelData, magnetometerData,  gravityData;
 // double ori[3] = {};
@@ -422,7 +455,6 @@ long microsecondsToCentimeters(long microseconds) {
 
 
 void loop() {
-  //Setting up
   uint16_t TopRight = sensorsL1[0].read()/10;  //Long range TOF reads
   uint16_t TopLeft = sensorsL1[1].read()/10;
   uint16_t TopMiddle = sensorsL1[2].read()/10;
@@ -433,6 +465,11 @@ void loop() {
   uint16_t BottomRight = sensorsL0[3].readRangeContinuousMillimeters()/10;
 
   elapsed_time = millis()/1000;
+
+  float Starting_color = {};
+  if (elapsed_time == 0) {
+    Starting_color = colorSensorDetect();
+  }
 
   Serial.print(ElectroMagnet1On);
   Serial.print(ElectroMagnet2On);
@@ -500,6 +537,8 @@ void loop() {
   Serial.print(BottomLeft);
   if (sensorsL0[3].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
     Serial.print('\t');
+
+  Serial.print(Starting_color);
 
 
   if(programState == 0) { //printing stuff relating to task
