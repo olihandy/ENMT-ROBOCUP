@@ -6,6 +6,8 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
+#include "Print_Readings.h"
+
 int elapsed_time = 99;
 //ELECTROMAGNET
 const int ElectroMagnet1Pin = 25;
