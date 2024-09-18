@@ -40,6 +40,7 @@ VL53L1X sensorsL1[sensorCountL1];
 VL53L0X sensorsL0[sensorCountL0];
 
 uint16_t TopRight, TopLeft, TopMiddle, MiddleLeft, MiddleRight, BottomLeft, BottomRight;
+const int numReadings = 7;
 
 void setup() {
   // put your setup code here, to run once:
@@ -116,53 +117,51 @@ void setup() {
 
 }
 
-void getReadings(void) {
-  uint16_t TopRight = sensorsL1[0].read()/10;  //Long range TOF reads
-  uint16_t TopLeft = sensorsL1[1].read()/10;
-  uint16_t TopMiddle = sensorsL1[2].read()/10;
-
-  uint16_t MiddleLeft = sensorsL0[0].readRangeContinuousMillimeters()/10;
-  uint16_t MiddleRight = sensorsL0[1].readRangeContinuousMillimeters()/10;
-  uint16_t BottomLeft = sensorsL0[2].readRangeContinuousMillimeters()/10;
-  uint16_t BottomRight = sensorsL0[3].readRangeContinuousMillimeters()/10;
+void GetTOF(uint16_t TOFreadings[]) {
+  readings[0] = sensorsL1[0].read() / 10;  // TopRight
+  readings[1] = sensorsL1[1].read() / 10;  // TopLeft
+  readings[2] = sensorsL1[2].read() / 10;  // TopMiddle
+  readings[3] = sensorsL0[0].readRangeContinuousMillimeters() / 10;  // MiddleLeft
+  readings[4] = sensorsL0[1].readRangeContinuousMillimeters() / 10;  // MiddleRight
+  readings[5] = sensorsL0[2].readRangeContinuousMillimeters() / 10;  // BottomLeft
+  readings[6] = sensorsL0[3].readRangeContinuousMillimeters() / 10;  // BottomRight
 }
 
-void PrintInformation (uint16_t TopLeft, uint16_t TopMiddle, uint16_t TopRight, uint16_t MiddleRight, uint16_t MiddleLeft, uint16_t BottomRight, uint16_t BottomLeft, int programState) {
-  //Sensor readings
+void PrintInformation(uint16_t TOFreadings[], int programState) {
   Serial.print("Top L ");
-  Serial.print(TopLeft);
+  Serial.print(readings[1]);
   if (sensorsL1[0].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
-    Serial.print('\t');
+  Serial.print('\t');
 
   Serial.print("M ");
-  Serial.print(TopMiddle);
+  Serial.print(readings[2]);
   if (sensorsL1[2].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
-    Serial.print('\t');
+  Serial.print('\t');
 
   Serial.print("R ");
-  Serial.print(TopRight);
+  Serial.print(readings[0]);
   if (sensorsL1[1].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
-    Serial.print('\t');
+  Serial.print('\t');
 
   Serial.print("Mid  R ");
-  Serial.print(MiddleRight);
+  Serial.print(readings[4]);
   if (sensorsL0[0].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
-    Serial.print('\t');
+  Serial.print('\t');
 
   Serial.print("L ");
-  Serial.print(MiddleLeft);
+  Serial.print(readings[3]);
   if (sensorsL0[1].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
-    Serial.print('\t');
+  Serial.print('\t');
 
   Serial.print("Bottom  R ");
-  Serial.print(BottomRight);
+  Serial.print(readings[6]);
   if (sensorsL0[2].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
-    Serial.print('\t');
+  Serial.print('\t');
 
   Serial.print("L ");
-  Serial.print(BottomLeft);
+  Serial.print(readings[5]);
   if (sensorsL0[3].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
-    Serial.print('\t');
+  Serial.print('\t');
 
 
   if(programState == 0) { //printing stuff relating to task
@@ -192,14 +191,17 @@ void PrintInformation (uint16_t TopLeft, uint16_t TopMiddle, uint16_t TopRight, 
 
 void loop() {
   // Get the readings from the sensors
-  getReadings();
+  uint16_t TOFreadings[numReadings];
+
+  // Get sensor readings and store them in the array
+  GetTOF(readings);
 
   // Example program state, you can update this according to your logic
   int programState = 0;
 
-  // Call PrintInformation with sensor data and program state
-  PrintInformation(TopLeft, TopMiddle, TopRight, MiddleRight, MiddleLeft, BottomRight, BottomLeft, programState);
+  // Call PrintInformation with the array of readings and program state
+  PrintInformation(TOFreadings, programState);
 
-  delay(1000); // Adjust delay as needed
+  delay(10); // Adjust delay as needed
 }
 
