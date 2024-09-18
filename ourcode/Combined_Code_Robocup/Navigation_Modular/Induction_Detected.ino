@@ -1,6 +1,7 @@
 #include <Wire.h>
 #include <stdio.h> 
 #include <Induction_Detected.h>
+#include <time.h>
 
 //Stepper Motor Setup
 int MAdirpin = 32;
