@@ -8,7 +8,11 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
-#include <>
+#include <Induction_Detected.h>
+#include <Motor_Functions.h>
+#include <Print_Readings.h>
+#include <ScoringMode.h>
+#include <Sensor_Readings.h>
 
 double elapsed_time = 0;
 const double two_minutes_in_seconds = 120.0;
