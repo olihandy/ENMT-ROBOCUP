@@ -144,7 +144,7 @@ void PrintInformation() {
   GetElectroMagnet(electromagnetStates);
   GetInduction(inductionSensorStates);
 
-  Serial.print("L ");
+  Serial.print("Top  L ");
   Serial.print(TOFreadings[1]);
   if (sensorsL1[0].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
   Serial.print("\t");
@@ -159,7 +159,7 @@ void PrintInformation() {
   if (sensorsL1[1].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
   Serial.print("\t");
 
-  Serial.print("Mid  R ");
+  Serial.print("Middle  R ");
   Serial.print(TOFreadings[4]);
   if (sensorsL0[0].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
   Serial.print("\t");
