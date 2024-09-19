@@ -22,22 +22,22 @@ int CurrentposX = 0;
 int CurrentposY = 0;
 int previousMove = 0; //0 for left, 1 for right
 int PrevturnTime = 0;
-int Xposlist[50] = { 0 };
-int Yposlist[50] = { 0 };
+int Xacclist[50] = { 0 };
+int Yacclist[50] = { 0 };
 int AverageAccelerationX = 0;
 int AverageAccelerationY = 0;
-//int CurrentposZ = 0;
-//int PrevPositionX = 0;
-//int PrevpositionY = 0;
-//int* OrienlistX;
-//int* OrienlistY;
+// int CurrentposZ = 0;
+// int PrevPositionX = 0;
+// int PrevpositionY = 0;
+// int* OrienlistX;
+// int* OrienlistY;
 int prevtime = 0;
 //int PrevOrienZ = 0;
 //int CurrentOrienX;
 //int CurrentOrienY;
 int CurrentOrienZ = 0;
-int AverageOrienZ = 0;
-int OrienZlist[50] = { 0 };
+int AverageAngaccZ = 0;
+int AngaccZList[50] = { 0 };
 
 //This means the pins, not entire ports which the cables connect to
 const int InductionPin = 27; //Induction sensor pin to check
@@ -102,42 +102,50 @@ int timedelay = 10;  //time in milliseconds, do not comment this out
 
 //IMU setup
 
-// /* This driver uses the Adafruit unified sensor library (Adafruit_Sensor),
-//    which provides a common 'type' for sensor data and some helper functions.
+/* This driver uses the Adafruit unified sensor library (Adafruit_Sensor),
+   which provides a common 'type' for sensor data and some helper functions.
 
-//    To use this driver you will also need to download the Adafruit_Sensor
-//    library and include it in your libraries folder.
+   To use this driver you will also need to download the Adafruit_Sensor
+   library and include it in your libraries folder.
 
-//    You should also assign a unique ID to this sensor for use with
-//    the Adafruit Sensor API so that you can identify this particular
-//    sensor in any data logs, etc.  To assign a unique ID, simply
-//    provide an appropriate value in the constructor below (12345
-//    is used by default in this example).
+   You should also assign a unique ID to this sensor for use with
+   the Adafruit Sensor API so that you can identify this particular
+   sensor in any data logs, etc.  To assign a unique ID, simply
+   provide an appropriate value in the constructor below (12345
+   is used by default in this example).
 
-//    Connections
-//    ===========
-//    Connect SCL to analog 5
-//    Connect SDA to analog 4
-//    Connect VDD to 3.3-5V DC
-//    Connect GROUND to common ground
+   Connections
+   ===========
+   Connect SCL to analog 5
+   Connect SDA to analog 4
+   Connect VDD to 3.3-5V DC
+   Connect GROUND to common ground
 
-//    History
-//    =======
-//    2015/MAR/03  - First release (KTOWN)
-// */
+   History
+   =======
+   2015/MAR/03  - First release (KTOWN)
+*/
 
-// /* Set the delay between fresh samples */
-// uint16_t BNO055_SAMPLERATE_DELAY_MS = 100;
+/* Set the delay between fresh samples */
+uint16_t BNO055_SAMPLERATE_DELAY_MS = 100;
 
-// // Check I2C device address and correct line below (by default address is 0x29 or 0x28)
-// //                                   id, address
-// // Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28); //searches to find IMU
-// Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire1);
+// Check I2C device address and correct line below (by default address is 0x29 or 0x28)
+//                                   id, address
+// Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28); //searches to find IMU
+Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);
+
+
 
 //Color Sensor setup
 #include <Adafruit_TCS34725.h>
 
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
+
+uint16_t colorlist[4];
+uint16_t red_Start;
+uint16_t green_Start;
+uint16_t blue_Start;
+uint16_t clear_Start;
 
 
 
@@ -270,28 +278,25 @@ void setup()  //Need one setup function
   pinMode(MBdirpin,OUTPUT);
   pinMode(MBsteppin,OUTPUT);
 
+
+
   //IMU
-  //   Serial.println("Orientation Sensor Test"); Serial.println("");
+  Serial.println("Orientation Sensor Test"); Serial.println("");
 
-  //   /* Initialise the sensor */
-  //   if (!bno.begin())
-  //   {
-  //     /* There was a problem detecting the BNO055 ... check your connections */
-  //     Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-  //     while (1);
-  //   }
-  //   Serial.print("IMU detected");
-  //  digitalWrite(IMUDetection,HIGH);
-  //   delay(1000);
-
-
-  //   //Inductive sensor
-  //   //digitalWrite(InductionOnPin,HIGH);
+  /* Initialise the sensor */
+  if (!bno.begin())
+  {
+    /* There was a problem detecting the BNO055 ... check your connections */
+    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    while (1);
+  }
+  Serial.print("IMU detected");
+  delay(1000);
 
   Serial.print("End of setup");
 }
 
-float colorSensorDetect(void) {
+void colorSensorDetect(uint16_t* returnlist) {
   uint16_t clear, red, green, blue;
 
   tcs.setInterrupt(false);      // turn on LED
@@ -302,10 +307,10 @@ float colorSensorDetect(void) {
 
   tcs.setInterrupt(true);  // turn off LED
   
-  Serial.print("Clear:\t"); Serial.print(clear);
-  Serial.print("\tR:\t"); Serial.print(red);
-  Serial.print("\tG:\t"); Serial.print(green);
-  Serial.print("\tB:\t"); Serial.print(blue);
+  //Serial.print("Clear:\t"); Serial.print(clear);
+  //Serial.print("\tR:\t"); Serial.print(red);
+  //Serial.print("\tG:\t"); Serial.print(green);
+  //Serial.print("\tB:\t"); Serial.print(blue);
 
   // Figure out some basic hex code for visualization
   uint32_t sum = clear;
@@ -314,11 +319,13 @@ float colorSensorDetect(void) {
   g = green; g /= sum;
   b = blue; b /= sum;
   r *= 256; g *= 256; b *= 256;
-  Serial.print("\t\t"); //t is space
-  Serial.print((int)r, HEX); Serial.print("\t"); Serial.print((int)g, HEX); Serial.print("\t"); Serial.print((int)b, HEX); //Need to move these to modularized code
-  Serial.println();
-  float returnlist[] = {r, g, b};
-  return *returnlist;
+  //Serial.print("\t\t"); //t is space
+  //Serial.print((int)r, HEX); Serial.print("\t"); Serial.print((int)g, HEX); Serial.print("\t"); Serial.print((int)b, HEX); //Need to move these to modularized code
+  //Serial.println();
+  returnlist[0] = clear;
+  returnlist[1] = red;
+  returnlist[2] = green;
+  returnlist[3] = blue;
 }
 
 void full_reverse(int timedelay) {
@@ -373,84 +380,79 @@ void full_turn_left(int timedelay) {
   delay(timedelay);
 }
 
-
 void forward_left(int timedelay) {
   myservoA.writeMicroseconds(full_forward_speed);
   myservoB.writeMicroseconds(half_forward_speed);
 }
 
-// double printEvent(sensors_event_t* event) { //problems getting right event
-//   double x = -1000000, y = -1000000 , z = -1000000; //dumb values, easy to spot problem
-//   if (event->type == SENSOR_TYPE_ORIENTATION) {
-//     Serial.print("Orient:");
-//     x = event->orientation.x;
-//     y = event->orientation.y;
-//     z = event->orientation.z;
-//   } else if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
-//     Serial.print("Linear:");
-//     x = event->acceleration.x;
-//     y = event->acceleration.y;
-//     z = event->acceleration.z;
-//   } else {
-//     Serial.print("Unk:");
-//   }
 
-//   Serial.print("\tx= ");
-//   Serial.print(x);
-//   Serial.print(" |\ty= ");
-//   Serial.print(y);
-//   Serial.print(" |\tz= ");
-//   Serial.println(z);
-//   Serial.print("\n");
-//   double XYZList[3] = {x, y, z};
-//   return *XYZList;
-// }
+double printEvent(sensors_event_t* event) { //problems getting right event
+  double x = -1000000, y = -1000000 , z = -1000000; //dumb values, easy to spot problem
+  if (event->type == SENSOR_TYPE_ORIENTATION) {
+    Serial.print("Orient:");
+    x = event->orientation.x;
+    y = event->orientation.y;
+    z = event->orientation.z;
+  } else if (event->type == SENSOR_TYPE_ACCELEROMETER) {
+    Serial.print("Accl:");
+    x = event->acceleration.x;
+    y = event->acceleration.y;
+    z = event->acceleration.z;
+  } else {
+    Serial.print("Unk:");
+  }
 
-// long microsecondsToCentimeters(long microseconds) {
-//   return microseconds / 29 / 2;
-// }
+  Serial.print("\tx= ");
+  Serial.print(x);
+  Serial.print(" |\ty= ");
+  Serial.print(y);
+  Serial.print(" |\tz= ");
+  Serial.println(z);
+  Serial.print("\n");
+  double XYZList[3] = {x, y, z};
+  return *XYZList;
+}
 
-// sensors_event_t orientationData , accelerometerData; //, angVelocityData , linearAccelData, magnetometerData,  gravityData;
-// double ori[3] = {};
-// double acc[3] = {}; //comment out if not using IMU
+sensors_event_t orientationData , accelerometerData; //, angVelocityData , linearAccelData, magnetometerData,  gravityData;
+double ori[3] = {};
+double acc[3] = {}; //comment out if not using IMU
 
-// void IMUGetPos(void) {
-//   //could add VECTOR_ACCELEROMETER, VECTOR_MAGNETOMETER,VECTOR_GRAVITY...
-//   bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER); //degrees
-//   //bno.getEvent(&angVelocityData, Adafruit_BNO055::VECTOR_GYROSCOPE); //rad/s
-//   //bno.getEvent(&linearAccelData, Adafruit_BNO055::VECTOR_LINEARACCEL); //m/s^2
-//   //bno.getEvent(&magnetometerData, Adafruit_BNO055::VECTOR_MAGNETOMETER);
-//   bno.getEvent(&accelerometerData, Adafruit_BNO055::VECTOR_ACCELEROMETER); //Gravity detected
-//   //bno.getEvent(&gravityData, Adafruit_BNO055::VECTOR_GRAVITY); //Gravity preset
+void IMUGetPos(void) {
+  //could add VECTOR_ACCELEROMETER, VECTOR_MAGNETOMETER,VECTOR_GRAVITY...
+  bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER); //degrees
+  //bno.getEvent(&angVelocityData, Adafruit_BNO055::VECTOR_GYROSCOPE); //rad/s
+  //bno.getEvent(&linearAccelData, Adafruit_BNO055::VECTOR_LINEARACCEL); //m/s^2
+  //bno.getEvent(&magnetometerData, Adafruit_BNO055::VECTOR_MAGNETOMETER);
+  bno.getEvent(&accelerometerData, Adafruit_BNO055::VECTOR_ACCELEROMETER); //Gravity detected with acceleration
+  //bno.getEvent(&gravityData, Adafruit_BNO055::VECTOR_GRAVITY); //Gravity preset
 
-//   *ori = printEvent(&orientationData);
-//   //printEvent(&angVelocityData);
-//   //printEvent(&linearAccelData);
-//   //printEvent(&magnetometerData);
-//   *acc = printEvent(&accelerometerData);
-//   //printEvent(&gravityData);
+  *ori = printEvent(&orientationData);
+  //printEvent(&angVelocityData);
+  //printEvent(&linearAccelData);
+  //printEvent(&magnetometerData);
+  *acc = printEvent(&accelerometerData);
+  //printEvent(&gravityData);
 
-//   int8_t boardTemp = bno.getTemp();
-//   Serial.println();
-//   Serial.print(F("temperature: "));
-//   Serial.println(boardTemp);
+  int8_t boardTemp = bno.getTemp();
+  Serial.println();
+  Serial.print(F("temperature: "));
+  Serial.println(boardTemp);
 
-//   uint8_t system, gyro, accel, mag = 0;
-//   bno.getCalibration(&system, &gyro, &accel, &mag);
-//   Serial.println();
-//   Serial.print("Calibration: Sys=");
-//   Serial.print(system);
-//   Serial.print(" Gyro=");
-//   Serial.print(gyro);
-//   Serial.print(" Accel=");
-//   Serial.print(accel);
-//   Serial.print(" Mag=");
-//   Serial.println(mag);
-
-//   Serial.println("--");
-
-//   //delay(BNO055_SAMPLERATE_DELAY_MS);
-// }
+  uint8_t system, gyro, accel, mag = 0;
+  bno.getCalibration(&system, &gyro, &accel, &mag);
+  Serial.println();
+  Serial.print("Calibration: Sys=");
+  Serial.print(system);
+  Serial.print(" Gyro=");
+  Serial.print(gyro);
+  Serial.print(" Accel=");
+  Serial.print(accel);
+  Serial.print(" Mag=");
+  Serial.println(mag);
+  
+  Serial.println("--");
+  //delay(BNO055_SAMPLERATE_DELAY_MS);
+}
 
 
 //=========================================================================================================================================================================================================================================================
@@ -461,6 +463,8 @@ void forward_left(int timedelay) {
 
 
 void loop() {
+  elapsed_time = millis()/1000; //Seconds since program has been running
+
   uint16_t TopRight = sensorsL1[0].read()/10;  //Long range TOF reads
   uint16_t TopLeft = sensorsL1[1].read()/10;
   uint16_t TopMiddle = sensorsL1[2].read()/10;
@@ -470,13 +474,102 @@ void loop() {
   uint16_t BottomLeft = sensorsL0[2].readRangeContinuousMillimeters()/10;
   uint16_t BottomRight = sensorsL0[3].readRangeContinuousMillimeters()/10;
 
-  elapsed_time = millis()/1000;
-
-  float Starting_color = {};
-  if (elapsed_time == 0) {
-    Starting_color = colorSensorDetect();
+  
+  //Getting current acceleration and therefore position:
+  //Have weighted average of IMU and Encoder
+  
+  IMUGetPos();
+  Serial.println(acc[0]); //Most recent x orientation/acceleration obtained
+  Serial.println(ori[0]);
+  Serial.println(acc[1]); //y orientation/acceleration obtained
+  Serial.println(ori[1]);
+  Serial.println(acc[2]); //y orientation/acceleration obtained
+  Serial.println(ori[2]);
+  for (uint16_t element=1; element<49; element++){                 //shifting the window of detected accelerations for X
+    if (element == 48) {
+      Xacclist[element] = 0;
+    } else {
+      Xacclist[element+1] = Xacclist[element+1];
+    }
+  }
+  Xacclist[0] = acc[0];  //Getting data
+  AverageAccelerationX = 0;
+  for (uint16_t averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect x accelerations
+    AverageAccelerationX += Xacclist[averagingelement];
+    AverageAccelerationX = AverageAccelerationX / 50;  //50 is elements in moving average filter
   }
 
+  for (uint16_t element = 1; element < 49; element++) {  //shifting the window of detected accelerations for Y
+    if (element == 48) {
+      Yacclist[element] = 0;
+    } else {
+      Yacclist[element + 1] = Yacclist[element + 1];
+    }
+  }
+  Yacclist[0] = acc[1]; //Getting data
+  AverageAccelerationY = 0;
+  for (uint16_t averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect y accelerations
+    AverageAccelerationY += Yacclist[averagingelement];
+    AverageAccelerationY = AverageAccelerationY / 50;
+  }
+
+  for (uint16_t element = 1; element < 49; element++) {  //shifting the window of detected accelerations for Z orientations
+    if (element == 48) {
+      AngaccZList[element] = 0;
+    } else {
+      AngaccZList[element + 1] = AngaccZList[element + 1];
+    }
+  }
+  AngaccZList[0] = ori[2]; //Getting data
+  AverageAngaccZ = 0;
+  for (uint16_t averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect Z orientations
+    AverageAngaccZ += AngaccZList[averagingelement];
+    AverageAngaccZ = AverageAngaccZ / 50;
+  }
+
+  Serial.println(Xacclist[0]);
+  Serial.println(Yacclist[0]);
+  Serial.println(AngaccZList[0]);
+  Serial.println(Xacclist[49]);
+  Serial.println(Yacclist[49]);
+  Serial.println(AngaccZList[49]);
+
+  int Timedif = millis()/1000 - prevtime;
+  Serial.print(Timedif);
+  prevtime = millis()/1000;  //Time difference for integration
+
+  CurrentposX += (AverageAccelerationX * pow(Timedif * 50, 2));  //Getting the x position from moving average filter, need pow function in Arduino for powers, differentiation
+  Serial.print("X: ");
+  Serial.print(CurrentposX);
+  CurrentposY += (AverageAccelerationY * pow(Timedif * 50, 2));  //y
+  Serial.print("Y: ");
+  Serial.print(CurrentposY);
+  CurrentOrienZ = AverageAngaccZ;  //orientation in Z
+  Serial.print("  OrienZ: ");
+  Serial.print(AverageAngaccZ);
+  Serial.print("\n");
+
+
+
+  colorSensorDetect(colorlist);
+  Serial.print("Color: ");
+  Serial.print(colorlist[0]);
+  Serial.print("\t");
+  Serial.print(colorlist[1]);
+  Serial.print("\t");
+  Serial.print(colorlist[2]);
+  Serial.print("\t");
+  Serial.print(colorlist[3]);
+  Serial.print("\t");
+
+  if (elapsed_time==0) {
+    clear_Start = colorlist[0];
+    red_Start = colorlist[1];
+    green_Start = colorlist[2];
+    blue_Start = colorlist[3]; 
+  }
+  
+  Serial.print("ElectroMagnet Status: ");
   Serial.print(ElectroMagnet1On);
   Serial.print(ElectroMagnet2On);
   Serial.print(ElectroMagnet3On);
@@ -543,8 +636,6 @@ void loop() {
   Serial.print(BottomLeft);
   if (sensorsL0[3].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
     Serial.print('\t');
-
-  Serial.print(Starting_color);
 
 
   if(programState == 0) { //printing stuff relating to task
@@ -731,68 +822,7 @@ void loop() {
 
 
 
- //Seconds since program has been running
-  //Getting current acceleration and therefore position:
-  //CurrentOrienX = SENSOR_TYPE_ACCELEROMETER->orientation.x
-  //CurrentOrienY = SENSOR_TYPE_ACCELEROMETER->orientation.y
-
-  //Have weighted average of IMU and Encoder
-
-
-  // for (uint16_t element=1; element<49; element++){                 //shifting the window of detected accelerations for X
-  //   if (element == 48) {
-  //     Xposlist[element] = 0;
-  //   } else {
-  //     Xposlist[element+1] = Xposlist[element+1];
-  //   }
-  // }
-  // IMUGetPos();
-  // Xposlist[0] = acc[0];
-  // for (uint16_t averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect x accelerations
-  //   AverageAccelerationX += Xposlist[averagingelement];
-  //   AverageAccelerationX = AverageAccelerationX / 50;
-  // }
-
-  // for (uint16_t element = 1; element < 49; element++) {  //shifting the window of detected accelerations for Y
-  //   if (element == 48) {
-  //     Yposlist[element] = 0;
-  //   } else {
-  //     Yposlist[element + 1] = Yposlist[element + 1];
-  //   }
-  // }
-  // Yposlist[0] = acc[1];
-  // for (uint16_t averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect y accelerations
-  //   AverageAccelerationY += Yposlist[averagingelement];
-  //   AverageAccelerationY = AverageAccelerationY / 50;
-  // }
-
-  // for (uint16_t element = 1; element < 49; element++) {  //shifting the window of detected accelerations for Z orientations
-  //   if (element == 48) {
-  //     OrienZlist[element] = 0;
-  //   } else {
-  //     OrienZlist[element + 1] = OrienZlist[element + 1];
-  //   }
-  // }
-  // OrienZlist[0] = ori[2];
-  // for (uint16_t averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect Z orientations
-  //   AverageOrienZ += OrienZlist[averagingelement];
-  //   AverageOrienZ = AverageOrienZ / 50;
-  // }
-
-  // int Timedif = millis()/1000 - prevtime;
-  // Serial.print(Timedif);
-  // prevtime = millis()/1000;  //Time difference for integration
-
-  // CurrentposX += (AverageAccelerationX * pow(Timedif * 50, 2));  //Getting the x position from moving average filter, need pow function in Arduino for powers
-  // Serial.print("X: ");
-  // Serial.print(CurrentposX);
-  // CurrentposY += (AverageAccelerationY * pow(Timedif * 50, 2));  //y
-  // Serial.print("Y: ");
-  // Serial.print(CurrentposY);
-  // CurrentOrienZ = AverageOrienZ;  //orientation in Z
-  // Serial.print("  OrienZ: ");
-  // Serial.print(AverageOrienZ);
-  // Serial.print("\n");
+ 
 
 
 
@@ -829,12 +859,3 @@ void loop() {
   //PrevPositionX = CurrentposX;
   //PrevOrienZ = CurrentOrienZ;
 //}
-
-
-
-
-//sensors_event_t orientationData;
-//bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER);
-//or_x = orientationData->orientation.x
-//or_y = orientationData->orientation.y
-//or_z = orientationData->orientation.z
