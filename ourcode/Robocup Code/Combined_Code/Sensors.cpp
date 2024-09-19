@@ -1,7 +1,7 @@
 #include "Sensors.h"
 
 int programState = 1;
-int elapsed_time = 99;
+int elapsed_time = 0;
 
 //ELECTROMAGNET
 const int ElectroMagnet1Pin = 25;
@@ -140,6 +140,7 @@ void GetInduction(bool inductionSensorStates[]) {
 }
 
 void PrintInformation() {
+  elapsed_time = millis()/1000;
   GetTOF(TOFreadings);
   GetElectroMagnet(electromagnetStates);
   GetInduction(inductionSensorStates);

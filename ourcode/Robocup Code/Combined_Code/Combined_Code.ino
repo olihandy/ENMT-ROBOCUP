@@ -9,5 +9,7 @@ void setup() {
 
 void loop() {
   PrintInformation();
-  full_forward(100);
+  full_forward(10);
+  // go_down();
+  // go_up();
 }
