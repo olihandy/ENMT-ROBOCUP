@@ -197,11 +197,11 @@ void PrintInformation() {
   Serial.print("\t");
 
   if(programState == 0) {
-    Serial.print("Moving Forward");
+    Serial.print("Starting");
   } else if(programState == 1) {
-    Serial.print("Turning");
+    Serial.print("Driving");
   } else if(programState == 2) {
-    Serial.print("Weight Found");
+    Serial.print("weight collected");
   } else {
     Serial.print("Going Home");
   } 

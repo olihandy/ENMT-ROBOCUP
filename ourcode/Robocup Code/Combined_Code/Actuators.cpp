@@ -9,6 +9,13 @@ int half_reverse_speed = 1750;
 int half_forward_speed = 1250;
 int timedelay = 100;
 
+
+int FrontElectromagnetPin = 20;
+int MiddleElectromagnetPin = 14;
+int BackElectromagnetPin = 24;
+int electromagnets_activated = 0;
+
+
 //STEPPER MOTOR SETUP:
 //001000
 //000000101
@@ -18,6 +25,7 @@ int MAdirpin = 32;
 int MAsteppin = 33;
 int MBdirpin = 30;
 int MBsteppin = 31;
+
 void setupActuators() {
   //Motors
   myservoA.attach(0);  // attaches the servo  to the servo object using pin 0
@@ -122,3 +130,14 @@ void go_up(void) {
   }
 }
 
+
+void turn_on_electromagnet(void) {
+  if(electromagnets_activated = 0) {
+    digitalWrite(BackElectromagnetPin,LOW);
+  }else if(electromagnets_activated = 1) {
+    digitalWrite(MiddleElectromagnetPin,LOW);
+  }else if(electromagnets_activated = 2) {
+    digitalWrite(MiddleElectromagnetPin,LOW);
+  }
+  electromagnets_activated += 1;
+}

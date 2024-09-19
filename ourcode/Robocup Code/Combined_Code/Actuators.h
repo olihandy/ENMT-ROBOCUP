@@ -16,6 +16,11 @@ extern int half_reverse_speed;
 extern int half_forward_speed;
 extern int timedelay;
 
+extern int FrontElectromagnetPin;
+extern int MiddleElectromagnetPin;
+extern int BackElectromagnetPin;
+extern int electromagnets_activated;
+
 //STEPPER MOTOR SETUP:
 //001000
 //000000101
@@ -39,5 +44,6 @@ void full_turn_left(int timedelay);
 void forward_left(int timedelay);
 void go_down(void);
 void go_up(void);
+void turn_on_electromagnet(void);
 
 #endif //ACTUATORS_H
