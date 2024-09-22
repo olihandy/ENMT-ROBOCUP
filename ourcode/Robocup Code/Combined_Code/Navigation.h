@@ -1,56 +1,63 @@
 #ifndef NAVIGATION_H
 #define NAVIGATION_H
 
-#include "Sensors.h"
-#include "Actuators.h"
+#include <Wire.h>  
+#include <VL53L1X.h>
+#include <VL53L0X.h>
+#include <SparkFunSX1509.h>
+#include <stdio.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <utility/imumaths.h>
+#include <stdio.h>
+#include <Servo.h>
+#include <Wire.h> 
 
-// Boolean flags for robot state
-extern bool ReadyToDrive;
-extern bool WeightDetected;
-extern bool ThreeWeightsCollected;
-extern bool TimeToGo;
-extern bool homeReached;
+// // Boolean flags for robot state
+// extern bool ReadyToDrive;
+// extern bool WeightDetected;
+// extern bool ThreeWeightsCollected;
+// extern bool TimeToGo;
+// extern bool homeReached;
 
-// Program state and motor timing
-extern int motortime;
-extern int programState;
-extern int elapsed_time;
+// // Program state and motor timing
+// extern int motortime;
 
-// Wall detection state
-enum WallDetectionState {
-  NO_WALL,            // Default state when no wall is detected
-  WALL_AHEAD,         // Wall detected ahead
-  SLIT_DETECTED,      // Slit detected
-  LEFT_WALL_DETECTED, // Wall detected on the left
-  SLAB_WALL_DETECTED, // Slab wall detected
-  RIGHT_WALL_DETECTED // Wall detected on the right
-};
+// // Wall detection state
+// enum WallDetectionState {
+//   NO_WALL,            // Default state when no wall is detected
+//   WALL_AHEAD,         // Wall detected ahead
+//   SLIT_DETECTED,      // Slit detected
+//   LEFT_WALL_DETECTED, // Wall detected on the left
+//   SLAB_WALL_DETECTED, // Slab wall detected
+//   RIGHT_WALL_DETECTED // Wall detected on the right
+// };
 
-// Declare the current wall detection state
-extern WallDetectionState wallState;
+// // Declare the current wall detection state
+// extern WallDetectionState wallState;
 
-// Robot state enumeration
-enum RobotState {
-  STARTING,          // 0 = Starting
-  DRIVING,           // 1 = Driving
-  COLLECTING_WEIGHT, // 2 = Collecting Weight
-  RETURNING_HOME     // 3 = Returning Home
-};
+// // Robot state enumeration
+// enum RobotState {
+//   STARTING,          // 0 = Starting
+//   DRIVING,           // 1 = Driving
+//   COLLECTING_WEIGHT, // 2 = Collecting Weight
+//   RETURNING_HOME     // 3 = Returning Home
+// };
 
-// Declare the current robot state
-extern RobotState currentState;
+// // Declare the current robot state
+// extern RobotState currentState;
 
-// Weight detection state enumeration
-enum WeightDetectionState {
-  WEIGHT_NOT_DETECTED, // 0 = Weight not detected
-  WEIGHT_DETECTED,     // 1 = Weight detected
-  WEIGHT_CONFIRMED     // 2 = Weight confirmed
-};
+// // Weight detection state enumeration
+// enum WeightDetectionState {
+//   WEIGHT_NOT_DETECTED, // 0 = Weight not detected
+//   WEIGHT_DETECTED,     // 1 = Weight detected
+//   WEIGHT_CONFIRMED     // 2 = Weight confirmed
+// };
 
-// Declare the current weight detection state
-extern WeightDetectionState weightState;
+// // Declare the current weight detection state
+// extern WeightDetectionState weightState;
 
 // Function prototypes
-void Navigation(void);
+extern void Navigation(void);
 
 #endif // NAVIGATION_H

@@ -14,29 +14,29 @@ extern int programState;
 extern int elapsed_time;
 
 //ELECTROMAGNET
-extern const int ElectroMagnet1Pin;
-extern const int ElectroMagnet2Pin;
-extern const int ElectroMagnet3Pin;
+const extern int ElectroMagnet1Pin;
+const extern int ElectroMagnet2Pin;
+const extern int ElectroMagnet3Pin;
 extern bool ElectroMagnet1On;
 extern bool ElectroMagnet2On;
 extern bool ElectroMagnet3On;
-extern const int numElectroMagnets;
+const extern int numElectroMagnets;
 
 
 //INDUCTION
-extern const int FrontInductionPin; 
-extern const int BackInductionPin;
-extern const int numInductiveSensors;
+const extern int FrontInductionPin; 
+const extern int BackInductionPin;
+const extern int numInductiveSensors;
 
 
 //TOF
-extern const byte SX1509_ADDRESS;
-extern const int VL53L0X_ADDRESS_START;
-extern const int VL53L1X_ADDRESS_START;
+const extern  byte SX1509_ADDRESS;
+const extern int VL53L0X_ADDRESS_START;
+const extern int VL53L1X_ADDRESS_START;
 
 //number of sensors in system.
-extern const uint8_t sensorCountL1;
-extern const uint8_t sensorCountL0; 
+const extern uint8_t sensorCountL1;
+const extern uint8_t sensorCountL0; 
 
 // The Arduino pin connected to the XSHUT pin of each sensor.
 extern const uint8_t xshutPinsL1[];
@@ -47,17 +47,17 @@ extern VL53L1X sensorsL1[];
 extern VL53L0X sensorsL0[];
 
 extern uint16_t TopRight, TopLeft, TopMiddle, MiddleLeft, MiddleRight, BottomLeft, BottomRight;
-extern const int numReadings;
+const extern int numReadings;
 
 extern uint16_t TOFreadings[];
 extern bool electromagnetStates[];
 extern bool inductionSensorStates[];
 
 // Function prototypes
-void setupSensors();
-void GetTOF(uint16_t TOFreadings[]);
-void GetElectroMagnet(bool electromagnetStates[]);
-void GetInduction(bool inductionSensorStates[]);
-void PrintInformation();
+extern void setupSensors();
+extern void GetTOF(uint16_t TOFreadings[]);
+extern void GetElectroMagnet(bool electromagnetStates[]);
+extern void GetInduction(bool inductionSensorStates[]);
+extern void PrintInformation();
 
 #endif  //PRINT_READINGS_H

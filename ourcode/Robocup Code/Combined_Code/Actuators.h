@@ -32,18 +32,18 @@ extern int MBdirpin;
 extern int MBsteppin;
 
 // Function declarations
-void setupActuators();
-void full_reverse(int timedelay);
-void stop(int timedelay);
-void full_forward(int timedelay);
-void half_forward(int timedelay);
-void full_turn_right(int timedelay);
-void forward_right(int timedelay);
-void directioncheck_right(int timedelay);
-void full_turn_left(int timedelay);
-void forward_left(int timedelay);
-void go_down(void);
-void go_up(void);
-void turn_on_electromagnet(void);
+extern void setupActuators();
+extern void full_reverse(int timedelay);
+extern void stop(int timedelay);
+extern void full_forward(int timedelay);
+extern void half_forward(int timedelay);
+extern void full_turn_right(int timedelay);
+extern void forward_right(int timedelay);
+extern void directioncheck_right(int timedelay);
+extern void full_turn_left(int timedelay);
+extern void forward_left(int timedelay);
+extern void go_down(void);
+extern void go_up(void);
+extern void turn_on_electromagnet(void);
 
 #endif //ACTUATORS_H
