@@ -1,4 +1,6 @@
 #include "Navigation.h"
+#include "Actuators.h"
+#include "Sensors.h"
 
 bool ReadyToDrive = 0;
 bool WeightDetected = 0;
@@ -162,6 +164,7 @@ void Navigation(void) {
             }
             break;
         }
+        break;
 
       case COLLECTING_WEIGHT:
         if (ThreeWeightsCollected || TimeToGo) {
