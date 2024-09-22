@@ -1,17 +1,8 @@
 #ifndef NAVIGATION_H
 #define NAVIGATION_H
 
-#include <Wire.h>  
-#include <VL53L1X.h>
-#include <VL53L0X.h>
-#include <SparkFunSX1509.h>
-#include <stdio.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BNO055.h>
-#include <utility/imumaths.h>
-#include <stdio.h>
-#include <Servo.h>
-#include <Wire.h> 
+
+#include "Sensors.h" 
 
 // // Boolean flags for robot state
 // extern bool ReadyToDrive;
@@ -60,4 +51,4 @@
 // Function prototypes
 extern void Navigation(void);
 
-#endif // NAVIGATION_H
+#endif //NAVIGATION_H
