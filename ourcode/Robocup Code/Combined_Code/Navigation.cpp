@@ -148,7 +148,7 @@ void Navigation(void) {
                 case WEIGHT_NOT_DETECTED:
                     switch (wallState) {
                         case WALL_AHEAD:
-                            full_turn_right(motortime);
+                            full_reverse(motortime);
                             break;
                         case SLIT_DETECTED:
                             full_forward(motortime);
@@ -157,8 +157,13 @@ void Navigation(void) {
                             full_turn_right(motortime);
                             break;
                         case SLAB_WALL_DETECTED:
-                            full_reverse(motortime);
-                            full_turn_left(motortime);
+                            full_reverse(5*motortime);
+                            if (TOFreading[1] > TOFreading[2] + 20) {
+                                full_turn_left(motortime);
+                            } else {
+                                full_turn_right(motortime);
+                            }
+                            break;
                             break;
                         case RIGHT_WALL_DETECTED:
                             full_turn_left(motortime);
