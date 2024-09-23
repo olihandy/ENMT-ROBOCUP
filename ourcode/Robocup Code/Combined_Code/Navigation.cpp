@@ -131,10 +131,10 @@ void Navigation(void) {
     switch (currentState) {
         case STARTING:
             // Take start readings, then set readyToDrive
-            if (TOFreading[1] > TOFreading[2] + 20) {
-                forward_left(motortime);
+            if (TOFreading[1] > (TOFreading[2] + 20)) {
+                forward_left(3*motortime);
             } else {
-                forward_right(motortime);
+                forward_right(3*motortime);
             }
             ReadyToDrive = true;
 
@@ -154,35 +154,35 @@ void Navigation(void) {
                             full_forward(motortime);
                             break;
                         case LEFT_WALL_DETECTED:
-                            full_turn_right(motortime);
+                            full_turn_right(3*motortime);
                             break;
                         case SLAB_WALL_DETECTED:
                             full_reverse(5*motortime);
-                            if (TOFreading[1] > TOFreading[2] + 20) {
-                                full_turn_left(motortime);
+                            if (TOFreading[1] > (TOFreading[2] + 20)) {
+                                full_turn_left(3*motortime);
                             } else {
-                                full_turn_right(motortime);
+                                full_turn_right(3*motortime);
                             }
-                            break;
                             break;
                         case RIGHT_WALL_DETECTED:
                             full_turn_left(motortime);
                             break;
                         case NO_WALL:
                         default:
-                            if (TOFreading[1] > TOFreading[2] + 20) {
-                                forward_left(motortime);
-                            } else {
-                                forward_right(motortime);
-                            }
+                          full_forward(motortime);
+                            // if (TOFreading[1] > TOFreading[2] + 20) {
+                            //     forward_left(3*motortime);
+                            // } else {
+                            //     forward_right(3*motortime);
+                            // }
                             break;
                     }
                     break;
 
                 case WEIGHT_DETECTED:
-                    if (TOFreading[5] > TOFreading[6] + 2) {
+                    if (TOFreading[5] > (TOFreading[6] + 2)) {
                         forward_right(motortime);
-                    } else if (TOFreading[6] > TOFreading[5] + 2) {
+                    } else if (TOFreading[6] > (TOFreading[5] + 2)) {
                         forward_left(motortime);
                     } else {
                         half_forward(motortime);
