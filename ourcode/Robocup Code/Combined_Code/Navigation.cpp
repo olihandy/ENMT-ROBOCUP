@@ -87,19 +87,23 @@ void PrintStates(void) {
 }
 
 void UpdateWallState(uint16_t TopLeft, uint16_t TopMiddle, uint16_t TopRight) {
-    if (TopLeft < 30) {
-        if (TopRight < 30) {
-            wallState = (TopMiddle < 20) ? WALL_AHEAD : SLIT_DETECTED;
-        } else {
-            wallState = LEFT_WALL_DETECTED;
-        }
-    } else if (TopMiddle < 20) {
-        wallState = SLAB_WALL_DETECTED;
-    } else if (TopRight < 30) {
-        wallState = RIGHT_WALL_DETECTED;
+  if (TopLeft < 20) {
+    if (TopRight < 20) {
+      if (TopMiddle < 20) {
+        wallState = WALL_AHEAD;
+      } else {
+        wallState = SLIT_DETECTED;
+      }
     } else {
-        wallState = NO_WALL; // If no walls are detected, default to NO_WALL
+      wallState = LEFT_WALL_DETECTED;
     }
+  } else if (TopMiddle < 20) {
+    wallState = SLAB_WALL_DETECTED;
+  } else if (TopRight < 20) {
+    wallState = RIGHT_WALL_DETECTED;
+  } else {
+    wallState = NO_WALL;
+  }
 }
 
 void UpdateWeightState(uint16_t* TOFreadings, bool FrontInduction) {
