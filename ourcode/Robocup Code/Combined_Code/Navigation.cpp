@@ -1,162 +1,208 @@
 #include "Navigation.h"
-
+#include "Sensors.h"
 
 // Define shared variables here
-// bool ReadyToDrive = false;
-// bool WeightDetected = false;
-// bool ThreeWeightsCollected = false;
-// bool TimeToGo = false;
-// bool homeReached = false;
+bool ReadyToDrive = false;
+bool WeightDetected = false;
+bool ThreeWeightsCollected = false;
+bool TimeToGo = false;
+bool homeReached = false;
 
-// int motortime = 10;
+int motortime = 10;
 
-// int FrontInduction;
-// int BackInduction;
+WallDetectionState wallState = NO_WALL;
+RobotState currentState = STARTING;
+WeightDetectionState weightState = WEIGHT_NOT_DETECTED;
 
-// WallDetectionState wallState = NO_WALL;
-// RobotState currentState = STARTING;
-// WeightDetectionState weightState = WEIGHT_NOT_DETECTED;
+void PrintStates(void) {
+    // Print out all the states for debugging
 
-void Navigation(void) {
-  // GetTOF(TOFreadings);
-  // GetElectroMagnet(electromagnetStates);
-  // GetInduction(inductionSensorStates);
+    Serial.print("ReadyToDrive: ");
+    Serial.println(ReadyToDrive ? "True" : "False");
 
-  // Implement your navigation logic here
-  // Ensure it interacts correctly with actuators and sensors
-  Serial.print("1");
+    Serial.print("WeightDetected: ");
+    Serial.println(WeightDetected ? "True" : "False");
+
+    Serial.print("ThreeWeightsCollected: ");
+    Serial.println(ThreeWeightsCollected ? "True" : "False");
+
+    Serial.print("TimeToGo: ");
+    Serial.println(TimeToGo ? "True" : "False");
+
+    Serial.print("HomeReached: ");
+    Serial.println(homeReached ? "True" : "False");
+
+    Serial.print("WallState: ");
+    switch (wallState) {
+        case NO_WALL:
+            Serial.println("NO_WALL");
+            break;
+        case WALL_AHEAD:
+            Serial.println("WALL_AHEAD");
+            break;
+        case SLIT_DETECTED:
+            Serial.println("SLIT_DETECTED");
+            break;
+        case LEFT_WALL_DETECTED:
+            Serial.println("LEFT_WALL_DETECTED");
+            break;
+        case SLAB_WALL_DETECTED:
+            Serial.println("SLAB_WALL_DETECTED");
+            break;
+        case RIGHT_WALL_DETECTED:
+            Serial.println("RIGHT_WALL_DETECTED");
+            break;
+    }
+
+    Serial.print("CurrentState: ");
+    switch (currentState) {
+        case STARTING:
+            Serial.println("STARTING");
+            break;
+        case DRIVING:
+            Serial.println("DRIVING");
+            break;
+        case COLLECTING_WEIGHT:
+            Serial.println("COLLECTING_WEIGHT");
+            break;
+        case RETURNING_HOME:
+            Serial.println("RETURNING_HOME");
+            break;
+    }
+
+    Serial.print("WeightState: ");
+    switch (weightState) {
+        case WEIGHT_NOT_DETECTED:
+            Serial.println("WEIGHT_NOT_DETECTED");
+            break;
+        case WEIGHT_DETECTED:
+            Serial.println("WEIGHT_DETECTED");
+            break;
+        case WEIGHT_CONFIRMED:
+            Serial.println("WEIGHT_CONFIRMED");
+            break;
+    }
+
+    Serial.println("----------------------");
 }
 
+void UpdateWallState(uint16_t TopLeft, uint16_t TopMiddle, uint16_t TopRight) {
+    if (TopLeft < 30) {
+        if (TopRight < 30) {
+            wallState = (TopMiddle < 20) ? WALL_AHEAD : SLIT_DETECTED;
+        } else {
+            wallState = LEFT_WALL_DETECTED;
+        }
+    } else if (TopMiddle < 20) {
+        wallState = SLAB_WALL_DETECTED;
+    } else if (TopRight < 30) {
+        wallState = RIGHT_WALL_DETECTED;
+    } else {
+        wallState = NO_WALL; // If no walls are detected, default to NO_WALL
+    }
+}
 
-  // int TopMiddle = 1;
-  // int TopLeft = 1;
-  // int TopRight = 1;
-  // int MiddleLeft = 1;
-  // int MiddleRight = 1;
-  // int BottomLeft = 1;
-  // int BottomRight = 1;
+void UpdateWeightState(uint16_t* TOFreadings, bool FrontInduction) {
+    if (FrontInduction) {
+        weightState = WEIGHT_CONFIRMED;
+    } else if ((TOFreadings[4] > (TOFreadings[6] + 5)) || (TOFreadings[3] > (TOFreadings[5] + 5))) {
+        weightState = WEIGHT_DETECTED;
+    } else {
+        weightState = WEIGHT_NOT_DETECTED;
+    }
+}
 
-  // FrontInduction = 1;
-  // BackInduction = 1;
+void Navigation(void) {
+    uint16_t* TOFreading = GetTOF();
+    bool* electromagnetState = GetElectroMagnet();
+    bool* inductionSensorState = GetInduction();
 
-  //  FrontInduction = !inductionSensorStates[0];
-  //  BackInduction = !inductionSensorStates[1];
+    // Update Front and Back Induction states
+    int FrontInduction = inductionSensorState[0];
+    int BackInduction = inductionSensorState[1];
 
-  // TOFreadings[0] = TopMiddle;
-  // TOFreadings[1] = TopLeft;
-  // TOFreadings[2] = TopRight;
-  // TOFreadings[3] = MiddleLeft;
-  // TOFreadings[4] = MiddleRight;
-  // TOFreadings[5] = BottomLeft;
-  // TOFreadings[6] = BottomRight;
+    // Update wall state
+    UpdateWallState(TOFreading[1], TOFreading[0], TOFreading[2]); // TopLeft, TopMiddle, TopRight
+    UpdateWeightState(TOFreading, FrontInduction);
+    
+    PrintInformation();
+    PrintStates();
 
-  // if (TopLeft < 20) {
-  //   if (TopRight < 20) {
-  //     if (TopMiddle < 20) {
-  //       wallState = WALL_AHEAD;
-  //     } else {
-  //       wallState = SLIT_DETECTED;
-  //     }
-  //   } else {
-  //     wallState = LEFT_WALL_DETECTED;
-  //   }
-  // } else if (TopMiddle < 20) {
-  //   wallState = SLAB_WALL_DETECTED;
-  // } else if (TopRight < 20) {
-  //   wallState = RIGHT_WALL_DETECTED;
-  // } else {
-  //   wallState = NO_WALL; // If no walls are detected, default to NO_WALL
-  // }
+    switch (currentState) {
+        case STARTING:
+            // Take start readings, then set readyToDrive
+            if (TOFreading[1] > TOFreading[2] + 20) {
+                forward_left(motortime);
+            } else {
+                forward_right(motortime);
+            }
+            ReadyToDrive = true;
 
-  // if((MiddleRight > (BottomRight + 5)) ||(MiddleLeft > (BottomLeft + 5))) {
-  // 	weightState = WEIGHT_DETECTED;
-  // } else if(FrontInduction) {
-  //   weightState = WEIGHT_CONFIRMED;
-  // } else {
-  //   weightState = WEIGHT_NOT_DETECTED;
-  // }
+            if (ReadyToDrive) {
+                currentState = DRIVING;
+            }
+            break;
 
-  // switch (currentState) {
-  //   case STARTING:
-  //     //Take start readings, then set readyToDrive
-  //     if(TopLeft > TopRight) {
-  //       forward_left(motortime);
-  //     } else {
-  //       forward_right(motortime);
-  //     }
-  //     ReadyToDrive = 1;          
-        
-  //     if (ReadyToDrive) {
-  //       currentState = DRIVING;
-  //     }
-  //     break;
+        case DRIVING:
+            switch (weightState) {
+                case WEIGHT_NOT_DETECTED:
+                    switch (wallState) {
+                        case WALL_AHEAD:
+                            full_turn_right(motortime);
+                            break;
+                        case SLIT_DETECTED:
+                            full_forward(motortime);
+                            break;
+                        case LEFT_WALL_DETECTED:
+                            full_turn_right(motortime);
+                            break;
+                        case SLAB_WALL_DETECTED:
+                            full_reverse(motortime);
+                            full_turn_left(motortime);
+                            break;
+                        case RIGHT_WALL_DETECTED:
+                            full_turn_left(motortime);
+                            break;
+                        case NO_WALL:
+                        default:
+                            if (TOFreading[1] > TOFreading[2] + 20) {
+                                forward_left(motortime);
+                            } else {
+                                forward_right(motortime);
+                            }
+                            break;
+                    }
+                    break;
 
-  //   case DRIVING:
+                case WEIGHT_DETECTED:
+                    if (TOFreading[5] > TOFreading[6] + 2) {
+                        forward_right(motortime);
+                    } else if (TOFreading[6] > TOFreading[5] + 2) {
+                        forward_left(motortime);
+                    } else {
+                        half_forward(motortime);
+                    }
+                    break;
 
-  //     switch (weightState) {
-  //       case WEIGHT_NOT_DETECTED:
-              
-  //         switch (wallState) {
-  //           case WALL_AHEAD:
-  //             full_turn_right(motortime);
-  //             break;
-  //           case SLIT_DETECTED:
-  //             full_forward(motortime);
-  //             break;
-  //           case LEFT_WALL_DETECTED:
-  //             forward_right(motortime);
-  //             break;
-  //           case SLAB_WALL_DETECTED:
-  //             full_reverse(motortime);
-  //             full_turn_left(motortime);
-  //             break;
-  //           case RIGHT_WALL_DETECTED:
-  //             forward_left(motortime);
-  //             break;
-  //           case NO_WALL:
-  //           default:
-  //             if(TopLeft > TopRight) {
-  //               forward_left(motortime);
-  //             } else {
-  //               forward_right(motortime);
-  //             }
-  //             break;
-  //             }
-  //       break;
-                
-  //       case WEIGHT_DETECTED:
-  //         if(BottomLeft > BottomRight + 2) {
-  //           forward_right(motortime);
-  //         } else if(BottomRight > BottomLeft + 2) {
-  //           forward_left(motortime);
-  //         } else {
-  //           half_forward(motortime);
-  //         }
-  //         break;
+                case WEIGHT_CONFIRMED:
+                    if (BackInduction) {
+                        turn_on_electromagnet();
+                    }
+                    break;
+            }
+            break;
 
-  //       case WEIGHT_CONFIRMED:
-  //         go_down();
-  //         if(BackInduction) {
-  //           turn_on_electromagnet();
-  //         }
-  //         break;
-  //       }
-  //       break;
+        case COLLECTING_WEIGHT:
+            if (ThreeWeightsCollected || TimeToGo) {
+                currentState = RETURNING_HOME;
+            }
+            break;
 
-  //   case COLLECTING_WEIGHT:
-  //     if (ThreeWeightsCollected || TimeToGo) {
-  //       currentState = RETURNING_HOME;
-  //     }
-  //     break;
-
-  //   case RETURNING_HOME:
-  //     // Logic for the Returning Home state
-  //     // Example condition: if the robot has returned home
-  //     if (homeReached) {
-  //       // Drop weights
-  //     }
-  //     break;
-  //     }
-  // }
-
-
+        case RETURNING_HOME:
+            // Logic for the Returning Home state
+            if (homeReached) {
+                // Drop weights
+            }
+            break;
+    }
+}

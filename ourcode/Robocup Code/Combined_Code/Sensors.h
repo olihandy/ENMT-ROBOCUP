@@ -10,7 +10,6 @@
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
 
-extern int programState;
 extern int elapsed_time;
 
 //ELECTROMAGNET
@@ -46,7 +45,6 @@ extern SX1509 io;  // Create an SX1509 object to be used throughout
 extern VL53L1X sensorsL1[];
 extern VL53L0X sensorsL0[];
 
-extern uint16_t TopRight, TopLeft, TopMiddle, MiddleLeft, MiddleRight, BottomLeft, BottomRight;
 const extern int numReadings;
 
 extern uint16_t TOFreadings[];
@@ -54,10 +52,10 @@ extern bool electromagnetStates[];
 extern bool inductionSensorStates[];
 
 // Function prototypes
-extern void setupSensors();
-extern void GetTOF(uint16_t TOFreadings[]);
-extern void GetElectroMagnet(bool electromagnetStates[]);
-extern void GetInduction(bool inductionSensorStates[]);
-extern void PrintInformation();
+void setupSensors();
+uint16_t* GetTOF();
+bool* GetElectroMagnet();
+bool* GetInduction();
+void PrintInformation();
 
 #endif  //PRINT_READINGS_H

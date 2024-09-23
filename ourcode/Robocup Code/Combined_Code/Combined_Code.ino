@@ -5,8 +5,10 @@
 void setup() {
   setupSensors();
   setupActuators();
+  delay(1000);
 }
 
 void loop() {
+
   Navigation();
 }
