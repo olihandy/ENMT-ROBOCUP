@@ -105,7 +105,7 @@ void UpdateWallState(uint16_t TopLeft, uint16_t TopMiddle, uint16_t TopRight) {
 void UpdateWeightState(uint16_t* TOFreadings, bool FrontInduction) {
     if (FrontInduction) {
         weightState = WEIGHT_CONFIRMED;
-    } else if ((TOFreadings[4] > (TOFreadings[6] + 5)) || (TOFreadings[3] > (TOFreadings[5] + 5))) {
+    } else if ((TOFreadings[4] > (TOFreadings[6] + 10)) || (TOFreadings[3] > (TOFreadings[5] + 10))) {
         weightState = WEIGHT_DETECTED;
     } else {
         weightState = WEIGHT_NOT_DETECTED;
