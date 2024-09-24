@@ -131,13 +131,12 @@ void go_up(void) {
 }
 
 
-void turn_on_electromagnet(void) {
-  if(electromagnets_activated = 0) {
+void turn_on_electromagnet(int electromagnet) {
+  if(electromagnet = 0) {
     digitalWrite(BackElectromagnetPin,LOW);
-  }else if(electromagnets_activated = 1) {
+  }else if(electromagnet = 1) {
     digitalWrite(MiddleElectromagnetPin,LOW);
-  }else if(electromagnets_activated = 2) {
+  }else if(electromagnet = 2) {
     digitalWrite(MiddleElectromagnetPin,LOW);
   }
-  electromagnets_activated += 1;
 }

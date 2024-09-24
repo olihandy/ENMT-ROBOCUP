@@ -44,6 +44,6 @@ extern void full_turn_left(int timedelay);
 extern void forward_left(int timedelay);
 extern void go_down(void);
 extern void go_up(void);
-extern void turn_on_electromagnet(void);
+extern void turn_on_electromagnet(int electromagnet);
 
 #endif //ACTUATORS_H

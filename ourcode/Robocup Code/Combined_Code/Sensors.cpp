@@ -1,4 +1,10 @@
 #include "Sensors.h"
+#include "SensorBuffering.h"
+
+#define BUFFER_SIZE 10
+const int numReadings = 7;
+
+circBuf_t TOFbuffers[numReadings];
 
 int elapsed_time = 0;
 
@@ -33,7 +39,6 @@ SX1509 io;  // Create an SX1509 object to be used throughout
 VL53L1X sensorsL1[sensorCountL1];
 VL53L0X sensorsL0[sensorCountL0];
 
-const int numReadings = 7;
 
 uint16_t TOFreadings[numReadings];
 bool electromagnetStates[numElectroMagnets];
@@ -55,6 +60,11 @@ void setupSensors() {
     if (!io.begin(SX1509_ADDRESS)) {
         Serial.println("Failed to talk to IO Expander for TOFs");
         while (1) {};
+    }
+    
+    // Initialize circular buffers for each TOF sensor
+    for (int i = 0; i < numReadings; i++) {
+        initCircBuf(&TOFbuffers[i], BUFFER_SIZE);
     }
 
     Wire.begin();
@@ -110,6 +120,25 @@ uint16_t* GetTOF() {
     TOFreadings[5] = sensorsL0[2].readRangeContinuousMillimeters() / 10;
     TOFreadings[6] = sensorsL0[3].readRangeContinuousMillimeters() / 10;
     return TOFreadings; // Return pointer to TOF readings
+}
+
+// Function to update and buffer TOF readings
+void UpdateTOFReadings() {
+    // Get TOF readings
+    uint16_t* readings = GetTOF();
+
+    // Write new readings into the circular buffers
+    for (int i = 0; i < numReadings; i++) {
+        writeCircBuf(&TOFbuffers[i], readings[i]);
+    }
+}
+
+uint32_t GetAverageTOFReading(int sensorIndex) {
+    uint32_t sum = 0;
+    for (int i = 0; i < TOFbuffers[sensorIndex].size; i++) {
+        sum += TOFbuffers[sensorIndex].data[i];
+    }
+    return sum / TOFbuffers[sensorIndex].size;
 }
 
 bool* GetElectroMagnet() {

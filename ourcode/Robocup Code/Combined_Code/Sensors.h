@@ -9,6 +9,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
+#include "SensorBuffering.h"
 
 extern int elapsed_time;
 
@@ -57,5 +58,7 @@ uint16_t* GetTOF();
 bool* GetElectroMagnet();
 bool* GetInduction();
 void PrintInformation();
+void UpdateTOFReadings();
+uint32_t GetAverageTOFReading(int sensorIndex);
 
 #endif  //PRINT_READINGS_H
