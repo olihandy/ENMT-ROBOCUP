@@ -23,8 +23,8 @@ void PrintStates(void) {
     Serial.print("WeightDetected: ");
     Serial.println(WeightDetected ? "True" : "False");
 
-    Serial.print("ThreeWeightsCollected: ");
-    Serial.println(ThreeWeightsCollected ? "True" : "False");
+    Serial.print("WeightsCollected: ");
+    Serial.println(NumWeightsCollected);
 
     Serial.print("TimeToGo: ");
     Serial.println(TimeToGo ? "True" : "False");
@@ -86,7 +86,7 @@ void PrintStates(void) {
     Serial.println("----------------------");
 }
 
-void UpdateWallState(uint16_t TopLeft, uint16_t TopMiddle, uint16_t TopRight) {
+void UpdateWallState(uint32_t TopLeft, uint32_t TopMiddle, uint32_t TopRight) {
   if (TopLeft < 30) {
     if (TopRight < 30) {
       if (TopMiddle < 30) {
@@ -106,7 +106,7 @@ void UpdateWallState(uint16_t TopLeft, uint16_t TopMiddle, uint16_t TopRight) {
   }
 }
 
-void UpdateWeightState(uint16_t MiddleRight, uint16_t BottomRight, uint16_t MiddleLeft, uint16_t BottomLeft, bool FrontInduction) {
+void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, bool FrontInduction) {
     if (FrontInduction) {
         weightState = WEIGHT_CONFIRMED;
     } else if ((MiddleRight > (BottomRight + 10)) || (MiddleLeft > (BottomLeft + 10))) {
@@ -116,35 +116,8 @@ void UpdateWeightState(uint16_t MiddleRight, uint16_t BottomRight, uint16_t Midd
     }
 }
 
-void Navigation(void) {
-  
-    UpdateTOFReadings(); // Update the circular buffers with new TOF data
-    bool* electromagnetState = GetElectroMagnet();
-    bool* inductionSensorState = GetInduction();
 
-    // Use averaged readings instead of raw readings
-    uint16_t TopMiddle = GetAverageTOFReading(0);
-    uint16_t TopLeft = GetAverageTOFReading(1);
-    uint16_t TopRight = GetAverageTOFReading(2);
-    uint16_t MiddleLeft = GetAverageTOFReading(3);
-    uint16_t MiddleRight = GetAverageTOFReading(4);
-    uint16_t BottomLeft = GetAverageTOFReading(5);
-    uint16_t BottomRight = GetAverageTOFReading(6);
-
-    // Update Front and Back Induction states
-    bool FrontInduction = inductionSensorState[0];
-    bool BackInduction = inductionSensorState[1];
-
-    bool FrontELectromagnet = electromagnetState[0];
-    bool MiddleELectromagnet = electromagnetState[1];
-    bool BackELectromagnet = electromagnetState[2];
-
-    // Update wall state
-    UpdateWallState(TopLeft, TopMiddle, TopRight); // TopLeft, TopMiddle, TopRight
-    UpdateWeightState(MiddleRight, BottomRight, MiddleLeft, BottomLeft, FrontInduction);
-    
-    PrintInformation();
-    PrintStates();
+void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_t MiddleLeft, uint32_t MiddleRight, uint32_t BottomLeft, uint32_t BottomRight, bool BackInduction) {
 
     switch (currentState) {
       case STARTING:
@@ -208,33 +181,35 @@ void Navigation(void) {
 
           case WEIGHT_CONFIRMED:
             if (BackInduction) {
-              if(NumWeightsCollected = 0) {
-                turn_on_electromagnet(0);
-                NumWeightsCollected ++;
-                go_up();
-                weightState = COLLECTING_WEIGHT;
-              } else if(NumWeightsCollected = 1) {
-                turn_on_electromagnet(1);
-                go_up();
-                weightState = COLLECTING_WEIGHT;
-              } else if(NumWeightsCollected = 2) {
-                turn_on_electromagnet(2);
-                go_up();
-                weightState = COLLECTING_WEIGHT;
-                NumWeightsCollected ++;
-                TimeToGo = true;
+              stop(5*motortime);
+              go_down();
+              currentState = COLLECTING_WEIGHT;
               }
-            }
             break;
         }
         break;
 
       case COLLECTING_WEIGHT:
-      
+        if(NumWeightsCollected = 0) {
+          turn_on_electromagnet(0);
+          NumWeightsCollected ++;
+          go_up();
+          currentState = DRIVING;
+        } else if(NumWeightsCollected = 1) {
+          turn_on_electromagnet(1);
+          go_up();
+          currentState = DRIVING;
+        } else if(NumWeightsCollected = 2) {
+          turn_on_electromagnet(2);
+          go_up();
+          currentState = DRIVING;
+          NumWeightsCollected ++;
+          TimeToGo = true;
+          
+                
         if (TimeToGo) {
           currentState = RETURNING_HOME;
         } else {
-          WeightState = WEIGHT_NOT_DETECTED;
           currentState = DRIVING;
         }
         break;
@@ -246,4 +221,21 @@ void Navigation(void) {
         }
         break;
     }
+  }
+}
+
+void UpdateAll(void) {
+    // Update all readings
+    UpdateTOFReadings(); 
+    bool* electromagnetState = GetElectroMagnet();
+    bool* inductionSensorState = GetInduction();
+
+    // Update states
+    UpdateWallState(GetAverageTOFReading(1), GetAverageTOFReading(0),  GetAverageTOFReading(2));
+    UpdateWeightState( GetAverageTOFReading(4),  GetAverageTOFReading(6), GetAverageTOFReading(3),  GetAverageTOFReading(5), inductionSensorState[0]);
+    Navigation(GetAverageTOFReading(0), GetAverageTOFReading(1), GetAverageTOFReading(2), GetAverageTOFReading(3), GetAverageTOFReading(4), GetAverageTOFReading(5), GetAverageTOFReading(6), inductionSensorState[1]);
+
+    //Print stuff
+    PrintInformation();
+    PrintStates();
 }

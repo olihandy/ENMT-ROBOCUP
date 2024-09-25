@@ -1,7 +1,7 @@
 #include "Sensors.h"
 #include "SensorBuffering.h"
 
-#define BUFFER_SIZE 10
+#define BUFFER_SIZE 5
 const int numReadings = 7;
 
 circBuf_t TOFbuffers[numReadings];
