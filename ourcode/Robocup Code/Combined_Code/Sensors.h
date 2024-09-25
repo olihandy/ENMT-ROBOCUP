@@ -12,6 +12,8 @@
 #include "SensorBuffering.h"
 
 extern int elapsed_time;
+extern unsigned long lastChangeTime; // Timestamp of the last change
+const extern unsigned long timeoutDuration; // 5 seconds
 
 //ELECTROMAGNET
 const extern int ElectroMagnet1Pin;

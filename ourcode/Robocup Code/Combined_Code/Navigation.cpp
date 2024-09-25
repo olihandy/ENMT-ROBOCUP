@@ -107,12 +107,20 @@ void UpdateWallState(uint32_t TopLeft, uint32_t TopMiddle, uint32_t TopRight) {
 }
 
 void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, bool FrontInduction) {
+    // Confirm weight based on FrontInduction
     if (FrontInduction) {
-        weightState = WEIGHT_CONFIRMED;
-    } else if ((MiddleRight > (BottomRight + 10)) || (MiddleLeft > (BottomLeft + 10))) {
-        weightState = WEIGHT_DETECTED;
-    } else {
-        weightState = WEIGHT_NOT_DETECTED;
+        // Set to WEIGHT_CONFIRMED only if it's not already confirmed
+        if (weightState != WEIGHT_CONFIRMED) {
+            weightState = WEIGHT_CONFIRMED;
+        }
+    } 
+    // Only update if weight is not confirmed
+    else if (weightState != WEIGHT_CONFIRMED) {
+        if ((MiddleRight > (BottomRight + 10)) || (MiddleLeft > (BottomLeft + 10))) {
+            weightState = WEIGHT_DETECTED;
+        } else {
+            weightState = WEIGHT_NOT_DETECTED;
+        }
     }
 }
 
@@ -148,11 +156,11 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
                 full_turn_right(3*motortime);
                 break;
               case SLAB_WALL_DETECTED:
-                full_reverse(5*motortime);
+                full_reverse(100*motortime);
                 if (TopLeft > (TopRight + 20)) {
-                  full_turn_left(3*motortime);
+                  full_turn_left(10*motortime);
                 } else {
-                  full_turn_right(3*motortime);
+                  full_turn_right(10*motortime);
                 }
                 break;
               case RIGHT_WALL_DETECTED:
@@ -189,28 +197,30 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
         }
         break;
 
-      case COLLECTING_WEIGHT:
-        if(NumWeightsCollected = 0) {
-          turn_on_electromagnet(0);
-          NumWeightsCollected ++;
-          go_up();
-          currentState = DRIVING;
-        } else if(NumWeightsCollected = 1) {
-          turn_on_electromagnet(1);
-          go_up();
-          currentState = DRIVING;
-        } else if(NumWeightsCollected = 2) {
-          turn_on_electromagnet(2);
-          go_up();
-          currentState = DRIVING;
-          NumWeightsCollected ++;
-          TimeToGo = true;
-          
-                
+    case COLLECTING_WEIGHT:
+        if (NumWeightsCollected == 0) {
+            turn_on_electromagnet(0);
+            NumWeightsCollected++;
+            go_up();
+            currentState = DRIVING;
+        } else if (NumWeightsCollected == 1) {
+            turn_on_electromagnet(1);
+            NumWeightsCollected++;
+            go_up();
+            currentState = DRIVING;
+        } else if (NumWeightsCollected == 2) {
+            turn_on_electromagnet(2);
+            go_up();
+            currentState = DRIVING;
+            NumWeightsCollected++;
+            TimeToGo = true;
+        }
+        
+        weightState = WEIGHT_NOT_DETECTED; // This will allow you to transition out of CONFIRMED
         if (TimeToGo) {
-          currentState = RETURNING_HOME;
+            currentState = RETURNING_HOME;
         } else {
-          currentState = DRIVING;
+            currentState = DRIVING;
         }
         break;
 
@@ -222,7 +232,6 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
         break;
     }
   }
-}
 
 void UpdateAll(void) {
     // Update all readings
@@ -233,7 +242,16 @@ void UpdateAll(void) {
     // Update states
     UpdateWallState(GetAverageTOFReading(1), GetAverageTOFReading(0),  GetAverageTOFReading(2));
     UpdateWeightState( GetAverageTOFReading(4),  GetAverageTOFReading(6), GetAverageTOFReading(3),  GetAverageTOFReading(5), inductionSensorState[0]);
-    Navigation(GetAverageTOFReading(0), GetAverageTOFReading(1), GetAverageTOFReading(2), GetAverageTOFReading(3), GetAverageTOFReading(4), GetAverageTOFReading(5), GetAverageTOFReading(6), inductionSensorState[1]);
+    
+  //   if (millis() - lastChangeTime > timeoutDuration) {
+  //     Serial.println("No sensor change detected for 5 seconds. Executing reverse navigation.");
+  //     full_reverse(100*motortime);
+  //     full_turn_right(100*motortime);
+  // } else {
+      // Normal navigation logic based on sensor data
+      // e.g., navigate towards detected objects, adjust path, etc.
+      Navigation(GetAverageTOFReading(0), GetAverageTOFReading(1), GetAverageTOFReading(2), GetAverageTOFReading(3), GetAverageTOFReading(4), GetAverageTOFReading(5), GetAverageTOFReading(6), inductionSensorState[1]);
+  // }
 
     //Print stuff
     PrintInformation();

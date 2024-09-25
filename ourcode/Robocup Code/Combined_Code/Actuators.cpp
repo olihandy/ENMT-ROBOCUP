@@ -37,6 +37,11 @@ void setupActuators() {
   pinMode(MAsteppin,OUTPUT);
   pinMode(MBdirpin,OUTPUT);
   pinMode(MBsteppin,OUTPUT);
+
+  pinMode(FrontElectromagnetPin, OUTPUT);
+  pinMode(MiddleElectromagnetPin, OUTPUT);
+  pinMode(BackElectromagnetPin, OUTPUT);  
+
 }
 
 void full_reverse(int timedelay) {
@@ -133,10 +138,10 @@ void go_up(void) {
 
 void turn_on_electromagnet(int electromagnet) {
   if(electromagnet = 0) {
-    digitalWrite(BackElectromagnetPin,LOW);
+    digitalWrite(BackElectromagnetPin, LOW);
   }else if(electromagnet = 1) {
-    digitalWrite(MiddleElectromagnetPin,LOW);
+    digitalWrite(MiddleElectromagnetPin, LOW);
   }else if(electromagnet = 2) {
-    digitalWrite(MiddleElectromagnetPin,LOW);
+    digitalWrite(MiddleElectromagnetPin, LOW);
   }
 }

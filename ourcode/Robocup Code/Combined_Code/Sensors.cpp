@@ -7,6 +7,8 @@ const int numReadings = 7;
 circBuf_t TOFbuffers[numReadings];
 
 int elapsed_time = 0;
+unsigned long lastChangeTime = 0; // Timestamp of the last change
+const unsigned long timeoutDuration = 5000; // 5 seconds
 
 // ELECTROMAGNET
 const int ElectroMagnet1Pin = 25;
@@ -132,6 +134,7 @@ void UpdateTOFReadings() {
         writeCircBuf(&TOFbuffers[i], readings[i]);
     }
 }
+
 
 uint32_t GetAverageTOFReading(int sensorIndex) {
     uint32_t sum = 0;
