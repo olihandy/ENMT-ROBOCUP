@@ -1,6 +1,12 @@
 #include "SensorBuffering.h"
-
-
+#include <Wire.h>  
+#include <VL53L1X.h>
+#include <VL53L0X.h>
+#include <SparkFunSX1509.h>
+#include <stdio.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <utility/imumaths.h>
 uint32_t * initCircBuf (circBuf_t *buffer, uint32_t size)
 {
 	buffer->windex = 0;
@@ -17,6 +23,13 @@ uint32_t * initCircBuf (circBuf_t *buffer, uint32_t size)
 // advance windex, modulo (buffer size).
 void writeCircBuf (circBuf_t *buffer, uint32_t entry)
 {
+    // Serial.print("Buffer after write: ");
+    // for (int i = 0; i < buffer->size; i++) {
+    //     Serial.print(buffer->data[i]);
+    //     Serial.print(" ");
+    // }
+    // Serial.println();
+
 	buffer->data[buffer->windex] = entry;
 	buffer->windex++;
 	if (buffer->windex >= buffer->size)

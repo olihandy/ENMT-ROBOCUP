@@ -1,7 +1,7 @@
 #include "Sensors.h"
 #include "SensorBuffering.h"
 
-#define BUFFER_SIZE 5
+#define BUFFER_SIZE 10
 const int numReadings = 7;
 
 circBuf_t TOFbuffers[numReadings];
@@ -9,6 +9,9 @@ circBuf_t TOFbuffers[numReadings];
 int elapsed_time = 0;
 unsigned long lastChangeTime = 0; // Timestamp of the last change
 const unsigned long timeoutDuration = 5000; // 5 seconds
+
+const int sensorErrorValue = 819;
+const int maxSensorValue = 115;
 
 // ELECTROMAGNET
 const int ElectroMagnet1Pin = 25;
@@ -114,34 +117,65 @@ void setupSensors() {
 }
 
 uint16_t* GetTOF() {
-    TOFreadings[0] = sensorsL1[0].read() / 10;
-    TOFreadings[1] = sensorsL1[1].read() / 10;
-    TOFreadings[2] = sensorsL1[2].read() / 10;
-    TOFreadings[3] = sensorsL0[0].readRangeContinuousMillimeters() / 10;
-    TOFreadings[4] = sensorsL0[1].readRangeContinuousMillimeters() / 10;
-    TOFreadings[5] = sensorsL0[2].readRangeContinuousMillimeters() / 10;
-    TOFreadings[6] = sensorsL0[3].readRangeContinuousMillimeters() / 10;
+    // Read top sensors (L1)
+    TOFreadings[0] = sensorsL1[0].read() / 10; // Top Left
+    TOFreadings[1] = sensorsL1[1].read() / 10; // Top Middle
+    TOFreadings[2] = sensorsL1[2].read() / 10; // Top Right
+
+    // Read bottom sensors (L0)
+    TOFreadings[3] = sensorsL0[0].readRangeContinuousMillimeters() / 10; // Middle Left
+    TOFreadings[4] = sensorsL0[1].readRangeContinuousMillimeters() / 10; // Middle Right
+    TOFreadings[5] = sensorsL0[2].readRangeContinuousMillimeters() / 10; // Bottom Left
+    TOFreadings[6] = sensorsL0[3].readRangeContinuousMillimeters() / 10; // Bottom Right
+
+    // Replace any erroneous 819 values in the bottom 4 sensors (indices 3-6)
+    for (int i = 3; i < 7; i++) {
+        if (TOFreadings[i] == sensorErrorValue) {
+            TOFreadings[i] = maxSensorValue; // Set fallback value if 819 is found
+        }
+    }
+
     return TOFreadings; // Return pointer to TOF readings
 }
 
-// Function to update and buffer TOF readings
 void UpdateTOFReadings() {
     // Get TOF readings
     uint16_t* readings = GetTOF();
 
-    // Write new readings into the circular buffers
+    // Write new readings into the circular buffers, skipping erroneous 819 values
     for (int i = 0; i < numReadings; i++) {
-        writeCircBuf(&TOFbuffers[i], readings[i]);
+        if (readings[i] != sensorErrorValue) {  // Ignore readings of 819
+            writeCircBuf(&TOFbuffers[i], readings[i]);
+        }
     }
 }
 
-
+// Function to calculate the average TOF reading from the circular buffer for a specific sensor index
 uint32_t GetAverageTOFReading(int sensorIndex) {
     uint32_t sum = 0;
+    int count = 0;
+
+    // Loop through the buffer to calculate the sum and count valid readings
     for (int i = 0; i < TOFbuffers[sensorIndex].size; i++) {
-        sum += TOFbuffers[sensorIndex].data[i];
+        if (TOFbuffers[sensorIndex].data[i] != sensorErrorValue) { // Skip erroneous readings
+            sum += TOFbuffers[sensorIndex].data[i];
+            count++;
+        }
     }
-    return sum / TOFbuffers[sensorIndex].size;
+
+    // Return average or maxSensorValue if no valid readings were found
+    return (count > 0) ? (sum / count) : maxSensorValue;
+}
+
+// Function to retrieve average readings for all TOF sensors
+uint16_t* GetAverageTOF() {
+    static uint16_t averageTOF[numReadings];
+
+    for (int i = 0; i < numReadings; i++) {
+        averageTOF[i] = GetAverageTOFReading(i);
+    }
+
+    return averageTOF; // Return pointer to average TOF readings
 }
 
 bool* GetElectroMagnet() {
@@ -159,42 +193,45 @@ bool* GetInduction() {
 
 void PrintInformation() {
     elapsed_time = millis() / 1000;
-    GetTOF(); // Update TOF readings
+    UpdateTOFReadings(); // Update TOF readings
     GetElectroMagnet(); // Update electromagnet states
     GetInduction(); // Update induction sensor states
 
+    // Get average TOF readings
+    uint16_t* averageReadings = GetAverageTOF();
+
     Serial.print("Top  L ");
-    Serial.print(TOFreadings[1]);
+    Serial.print(averageReadings[1]);
     if (sensorsL1[0].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
     Serial.print("\t");
 
     Serial.print("M ");
-    Serial.print(TOFreadings[0]);
+    Serial.print(averageReadings[0]);
     if (sensorsL1[2].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
     Serial.print("\t");
 
     Serial.print("R ");
-    Serial.print(TOFreadings[2]);
+    Serial.print(averageReadings[2]);
     if (sensorsL1[1].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
     Serial.print("\t");
 
     Serial.print("Middle  R ");
-    Serial.print(TOFreadings[4]);
+    Serial.print(averageReadings[4]);
     if (sensorsL0[0].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
     Serial.print("\t");
 
     Serial.print("L ");
-    Serial.print(TOFreadings[3]);
+    Serial.print(averageReadings[3]);
     if (sensorsL0[1].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
     Serial.print("\t");
 
     Serial.print("Bottom  R ");
-    Serial.print(TOFreadings[6]);
+    Serial.print(averageReadings[6]);
     if (sensorsL0[2].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
     Serial.print("\t");
 
     Serial.print("L ");
-    Serial.print(TOFreadings[5]);
+    Serial.print(averageReadings[5]);
     if (sensorsL0[3].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
     Serial.print("\t");
 

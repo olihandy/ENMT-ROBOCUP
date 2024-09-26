@@ -8,11 +8,54 @@ int NumWeightsCollected = 0;
 bool TimeToGo = false;
 bool homeReached = false;
 
+int NOCHANGETHRESHOLD = 5;
+
 int motortime = 10;
 
 WallDetectionState wallState = NO_WALL;
 RobotState currentState = STARTING;
 WeightDetectionState weightState = WEIGHT_NOT_DETECTED;
+
+// Add these global variables to store previous sensor states
+uint16_t prevTOFReadings[7];
+bool prevInductionSensorStates[2];
+
+void setupNav() {
+    // Initialize previous readings to avoid false positive changes at startup
+    for (int i = 0; i < numReadings; i++) {
+        prevTOFReadings[i] = TOFreadings[i];
+    }
+
+    for (int i = 0; i < numInductiveSensors; i++) {
+        prevInductionSensorStates[i] = inductionSensorStates[i];
+    }
+
+    // Other setup code
+}
+
+
+bool CheckForSensorUpdates() {
+    bool sensorChanged = false;
+
+    // Check for changes in TOF readings
+    for (int i = 0; i < numReadings; i++) {
+        if (abs(TOFreadings[i] - prevTOFReadings[i]) > NOCHANGETHRESHOLD) {  // Only consider changes greater than 3
+            sensorChanged = true; // Mark as changed
+            prevTOFReadings[i] = TOFreadings[i]; // Update previous readings
+        }
+    }
+
+    // Check for changes in induction sensor states
+    bool* inductionSensorState = GetInduction(); // Get current induction sensor states
+    for (int i = 0; i < numInductiveSensors; i++) {
+        if (inductionSensorState[i] != prevInductionSensorStates[i]) {
+            sensorChanged = true; // Mark as changed
+            prevInductionSensorStates[i] = inductionSensorState[i]; // Update previous state
+        }
+    }
+
+    return sensorChanged;
+}
 
 void PrintStates(void) {
     // Print out all the states for debugging
@@ -234,26 +277,33 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
   }
 
 void UpdateAll(void) {
-    // Update all readings
+    // Update all sensor readings
     UpdateTOFReadings(); 
     bool* electromagnetState = GetElectroMagnet();
     bool* inductionSensorState = GetInduction();
 
     // Update states
-    UpdateWallState(GetAverageTOFReading(1), GetAverageTOFReading(0),  GetAverageTOFReading(2));
-    UpdateWeightState( GetAverageTOFReading(4),  GetAverageTOFReading(6), GetAverageTOFReading(3),  GetAverageTOFReading(5), inductionSensorState[0]);
+    UpdateWallState(GetAverageTOFReading(1), GetAverageTOFReading(0), GetAverageTOFReading(2));
+    UpdateWeightState(GetAverageTOFReading(4), GetAverageTOFReading(6), GetAverageTOFReading(3), GetAverageTOFReading(5), inductionSensorState[0]);
     
-  //   if (millis() - lastChangeTime > timeoutDuration) {
-  //     Serial.println("No sensor change detected for 5 seconds. Executing reverse navigation.");
-  //     full_reverse(100*motortime);
-  //     full_turn_right(100*motortime);
-  // } else {
-      // Normal navigation logic based on sensor data
-      // e.g., navigate towards detected objects, adjust path, etc.
-      Navigation(GetAverageTOFReading(0), GetAverageTOFReading(1), GetAverageTOFReading(2), GetAverageTOFReading(3), GetAverageTOFReading(4), GetAverageTOFReading(5), GetAverageTOFReading(6), inductionSensorState[1]);
-  // }
+    // Check for sensor changes and update lastChangeTime if necessary
+    if (CheckForSensorUpdates()) {
+        lastChangeTime = millis(); // Reset timer on sensor change
+    }
 
-    //Print stuff
+    // If no change detected within the timeout duration, execute reverse navigation
+    if (millis() - lastChangeTime > timeoutDuration) {
+        Serial.println("No sensor change detected for 5 seconds. Executing reverse navigation.");
+        full_reverse(100 * motortime);
+        full_turn_right(100 * motortime);
+    } else {
+        // Normal navigation logic based on updated sensor data
+        Navigation(GetAverageTOFReading(0), GetAverageTOFReading(1), GetAverageTOFReading(2), 
+                   GetAverageTOFReading(3), GetAverageTOFReading(4), GetAverageTOFReading(5), 
+                   GetAverageTOFReading(6), inductionSensorState[1]);
+    }
+
+    // Print debugging information
     PrintInformation();
     PrintStates();
 }
