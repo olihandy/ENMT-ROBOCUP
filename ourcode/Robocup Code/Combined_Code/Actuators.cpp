@@ -11,16 +11,15 @@ int timedelay = 100;
 
 
 int FrontElectromagnetPin = 20;
-int MiddleElectromagnetPin = 14;
-int BackElectromagnetPin = 24;
-int electromagnets_activated = 0;
+int MiddleElectromagnetPin = 24;
+int BackElectromagnetPin = 14;
 
 
 //STEPPER MOTOR SETUP:
 //001000
 //000000101
 
-int num_steps = 30000; // To be optimised
+int num_steps = 300; // To be optimised
 int MAdirpin = 32;
 int MAsteppin = 33;
 int MBdirpin = 30;
@@ -41,6 +40,9 @@ void setupActuators() {
   pinMode(FrontElectromagnetPin, OUTPUT);
   pinMode(MiddleElectromagnetPin, OUTPUT);
   pinMode(BackElectromagnetPin, OUTPUT);  
+  
+  digitalWrite(BackElectromagnetPin, HIGH);
+
 
 }
 
@@ -136,12 +138,20 @@ void go_up(void) {
 }
 
 
-void turn_on_electromagnet(int electromagnet) {
-  if(electromagnet = 0) {
-    digitalWrite(BackElectromagnetPin, LOW);
-  }else if(electromagnet = 1) {
-    digitalWrite(MiddleElectromagnetPin, LOW);
-  }else if(electromagnet = 2) {
-    digitalWrite(MiddleElectromagnetPin, LOW);
-  }
+void turn_on_electromagnet(int index) {
+    switch (index) {
+        case 0:
+            digitalWrite(BackElectromagnetPin, HIGH); // Activate first electromagnet
+            break;
+        case 1:
+            digitalWrite(MiddleElectromagnetPin, HIGH); // Activate second electromagnet
+            break;
+        case 2:
+            digitalWrite(FrontElectromagnetPin, HIGH); // Activate third electromagnet
+            break;
+        default:
+            Serial.println("Invalid electromagnet index!");
+            break;
+    }
 }
+

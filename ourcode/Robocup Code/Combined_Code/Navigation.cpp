@@ -20,26 +20,12 @@ WeightDetectionState weightState = WEIGHT_NOT_DETECTED;
 uint16_t prevTOFReadings[7];
 bool prevInductionSensorStates[2];
 
-void setupNav() {
-    // Initialize previous readings to avoid false positive changes at startup
-    for (int i = 0; i < numReadings; i++) {
-        prevTOFReadings[i] = TOFreadings[i];
-    }
-
-    for (int i = 0; i < numInductiveSensors; i++) {
-        prevInductionSensorStates[i] = inductionSensorStates[i];
-    }
-
-    // Other setup code
-}
-
-
 bool CheckForSensorUpdates() {
     bool sensorChanged = false;
 
     // Check for changes in TOF readings
     for (int i = 0; i < numReadings; i++) {
-        if (abs(TOFreadings[i] - prevTOFReadings[i]) > NOCHANGETHRESHOLD) {  // Only consider changes greater than 3
+        if (abs(TOFreadings[i] - prevTOFReadings[i]) > NOCHANGETHRESHOLD) {  // Only consider changes greater than 5
             sensorChanged = true; // Mark as changed
             prevTOFReadings[i] = TOFreadings[i]; // Update previous readings
         }
@@ -243,16 +229,22 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
     case COLLECTING_WEIGHT:
         if (NumWeightsCollected == 0) {
             turn_on_electromagnet(0);
+            Serial.println("Electromagnet 0 activated");
+
             NumWeightsCollected++;
             go_up();
             currentState = DRIVING;
         } else if (NumWeightsCollected == 1) {
             turn_on_electromagnet(1);
+            Serial.println("Electromagnet 1 activated");
+           
             NumWeightsCollected++;
             go_up();
             currentState = DRIVING;
         } else if (NumWeightsCollected == 2) {
             turn_on_electromagnet(2);
+            Serial.println("Electromagnet 2 activated");
+           
             go_up();
             currentState = DRIVING;
             NumWeightsCollected++;
@@ -268,7 +260,7 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
         break;
 
       case RETURNING_HOME:
-        // Logic for the Returning Home state
+        stop(motortime);
         if (homeReached) {
           // Drop weights
         }

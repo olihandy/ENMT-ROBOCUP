@@ -14,12 +14,9 @@ const int sensorErrorValue = 819;
 const int maxSensorValue = 115;
 
 // ELECTROMAGNET
-const int ElectroMagnet1Pin = 25;
-const int ElectroMagnet2Pin = 24;
-const int ElectroMagnet3Pin = 14;
-bool ElectroMagnet1On = false;
-bool ElectroMagnet2On = false;
-bool ElectroMagnet3On = false;
+const int FrontElectromagnetPin = 20;
+const int MiddleElectromagnetPin = 24;
+const int BackElectromagnetPin = 14;
 const int numElectroMagnets = 3;
 
 // INDUCTION
@@ -53,9 +50,9 @@ void setupSensors() {
     Serial.print("Setup");
 
     // ElectroMagnet
-    pinMode(ElectroMagnet1Pin, OUTPUT);
-    pinMode(ElectroMagnet2Pin, OUTPUT);
-    pinMode(ElectroMagnet3Pin, OUTPUT);  
+    pinMode(FrontElectromagnetPin, OUTPUT);
+    pinMode(MiddleElectromagnetPin, OUTPUT);
+    pinMode(BackElectromagnetPin, OUTPUT);  
     
     // Induction sensor
     pinMode(FrontInductionPin, INPUT);
@@ -179,9 +176,9 @@ uint16_t* GetAverageTOF() {
 }
 
 bool* GetElectroMagnet() {
-    electromagnetStates[0] = ElectroMagnet1On;
-    electromagnetStates[1] = ElectroMagnet2On;
-    electromagnetStates[2] = ElectroMagnet3On;
+    electromagnetStates[0] = digitalRead(FrontElectromagnetPin);
+    electromagnetStates[1] = digitalRead(MiddleElectromagnetPin);
+    electromagnetStates[2] = digitalRead(BackElectromagnetPin);
     return electromagnetStates; // Return pointer to electromagnet states
 }
 
