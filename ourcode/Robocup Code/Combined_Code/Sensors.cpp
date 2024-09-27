@@ -14,9 +14,9 @@ const int sensorErrorValue = 819;
 const int maxSensorValue = 115;
 
 // ELECTROMAGNET
-const int FrontElectromagnetPin = 20;
+const int FrontElectromagnetPin = 14;
 const int MiddleElectromagnetPin = 24;
-const int BackElectromagnetPin = 14;
+const int BackElectromagnetPin = 20;
 const int numElectroMagnets = 3;
 
 // INDUCTION
@@ -232,9 +232,9 @@ void PrintInformation() {
     if (sensorsL0[3].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
     Serial.print("\t");
 
-    Serial.print(electromagnetStates[0]);
-    Serial.print(electromagnetStates[1]);
     Serial.print(electromagnetStates[2]);
+    Serial.print(electromagnetStates[1]);
+    Serial.print(electromagnetStates[0]);
     Serial.print("\t");
 
     Serial.print("Front Induction Sensor: ");
