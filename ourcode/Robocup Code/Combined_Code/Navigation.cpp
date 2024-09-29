@@ -9,6 +9,7 @@ bool TimeToGo = false;
 bool homeReached = false;
 
 int NOCHANGETHRESHOLD = 5;
+int timeWeightDetected;
 
 int motortime = 10;
 
@@ -145,7 +146,8 @@ void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t Midd
     } 
     // Only update if weight is not confirmed
     else if (weightState != WEIGHT_CONFIRMED) {
-        if ((MiddleRight > (BottomRight + 10)) || (MiddleLeft > (BottomLeft + 10))) {
+        if ((MiddleRight > (BottomRight)) || (MiddleLeft > (BottomLeft))) {
+            timeWeightDetected = millis();
             weightState = WEIGHT_DETECTED;
         } else {
             weightState = WEIGHT_NOT_DETECTED;
@@ -217,6 +219,9 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
             break;
 
           case WEIGHT_CONFIRMED:
+            if((millis() - timeWeightDetected) > timeoutDuration) {
+              weightState = WEIGHT_NOT_DETECTED;
+            }
             if (BackInduction) {
               stop(5*motortime);
               go_down();

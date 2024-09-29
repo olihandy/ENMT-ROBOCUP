@@ -9,9 +9,9 @@ int half_reverse_speed = 1750;
 int half_forward_speed = 1250;
 int timedelay = 100;
 
-int FrontElectromagnetPin = 14;
+int FrontElectromagnetPin = 20;
 int MiddleElectromagnetPin = 24;
-int BackElectromagnetPin = 20;
+int BackElectromagnetPin = 14;
 
 //STEPPER MOTOR SETUP:
 //001000
