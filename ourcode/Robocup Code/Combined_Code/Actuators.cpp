@@ -109,13 +109,12 @@ void go_down(void) {
   
   for(int j=0;j<=num_steps;j++)            //Move 1000 steps down
   {
-    delayMicroseconds(20);
     digitalWrite(MAsteppin,LOW);
     digitalWrite(MBsteppin,LOW);
-    delayMicroseconds(10);
+    delayMicroseconds(20);
     digitalWrite(MAsteppin,HIGH);
     digitalWrite(MBsteppin,HIGH);
-    delayMicroseconds(10);
+    delayMicroseconds(20);
   }
 }
 
@@ -125,13 +124,12 @@ void go_up(void) {
 
     for(int j=0;j<=num_steps;j++)            //Move 1000 steps up
   {
-    delayMicroseconds(20);
     digitalWrite(MAsteppin,LOW);
     digitalWrite(MBsteppin,LOW);
-    delayMicroseconds(10);
+    delayMicroseconds(20);
     digitalWrite(MAsteppin,HIGH);
     digitalWrite(MBsteppin,HIGH);
-    delayMicroseconds(10);
+    delayMicroseconds(20);
   }
 }
 
