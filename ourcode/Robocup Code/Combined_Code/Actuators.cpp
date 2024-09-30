@@ -17,7 +17,7 @@ int BackElectromagnetPin = 14;
 //001000
 //000000101
 
-int num_steps = 65500; // To be optimised
+int num_steps = 65000; // To be optimised
 int MAdirpin = 32;
 int MAsteppin = 33;
 int MBdirpin = 30;

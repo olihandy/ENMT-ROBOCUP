@@ -222,6 +222,12 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
             if((millis() - timeWeightDetected) > timeoutDuration) {
               weightState = WEIGHT_NOT_DETECTED;
             }
+            if(NumWeightsCollected > 0) {
+              stop(5*motortime);
+              go_down();
+              half_forward(motortime * (30 - 10 * NumWeightsCollected ));
+              currentState = COLLECTING_WEIGHT;
+            }
             if (BackInduction) {
               stop(5*motortime);
               go_down();
@@ -238,13 +244,16 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
 
             NumWeightsCollected++;
             go_up();
+            weightState = WEIGHT_NOT_DETECTED;
             currentState = DRIVING;
+
         } else if (NumWeightsCollected == 1) {
             turn_on_electromagnet(1);
             Serial.println("Electromagnet 1 activated");
            
             NumWeightsCollected++;
             go_up();
+            weightState = WEIGHT_NOT_DETECTED;            
             currentState = DRIVING;
         } else if (NumWeightsCollected == 2) {
             turn_on_electromagnet(2);
@@ -252,6 +261,7 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
            
             go_up();
             currentState = DRIVING;
+            weightState = WEIGHT_NOT_DETECTED;
             NumWeightsCollected++;
             TimeToGo = true;
         }
