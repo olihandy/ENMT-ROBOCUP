@@ -112,10 +112,10 @@ void go_down(void) {
     delayMicroseconds(20);
     digitalWrite(MAsteppin,LOW);
     digitalWrite(MBsteppin,LOW);
-    delayMicroseconds(100);
+    delayMicroseconds(10);
     digitalWrite(MAsteppin,HIGH);
     digitalWrite(MBsteppin,HIGH);
-    delayMicroseconds(100);
+    delayMicroseconds(10);
   }
 }
 
@@ -128,10 +128,10 @@ void go_up(void) {
     delayMicroseconds(20);
     digitalWrite(MAsteppin,LOW);
     digitalWrite(MBsteppin,LOW);
-    delayMicroseconds(100);
+    delayMicroseconds(10);
     digitalWrite(MAsteppin,HIGH);
     digitalWrite(MBsteppin,HIGH);
-    delayMicroseconds(100);
+    delayMicroseconds(10);
   }
 }
 
