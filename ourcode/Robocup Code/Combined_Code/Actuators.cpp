@@ -17,7 +17,7 @@ int BackElectromagnetPin = 14;
 //001000
 //000000101
 
-int num_steps = 65000; // To be optimised
+int num_steps = 67000; // To be optimised
 int MAdirpin = 32;
 int MAsteppin = 33;
 int MBdirpin = 30;
@@ -38,8 +38,6 @@ void setupActuators() {
   pinMode(FrontElectromagnetPin, OUTPUT);
   pinMode(MiddleElectromagnetPin, OUTPUT);
   pinMode(BackElectromagnetPin, OUTPUT);  
-  
-  digitalWrite(BackElectromagnetPin, HIGH);
 
 
 }
@@ -144,6 +142,23 @@ void turn_on_electromagnet(int index) {
             break;
         case 2:
             digitalWrite(FrontElectromagnetPin, HIGH); // Activate third electromagnet
+            break;
+        default:
+            Serial.println("Invalid electromagnet index!");
+            break;
+    }
+}
+
+void turn_off_electromagnet(int index) {
+    switch (index) {
+        case 0:
+            digitalWrite(BackElectromagnetPin, LOW); // Activate first electromagnet
+            break;
+        case 1:
+            digitalWrite(MiddleElectromagnetPin, LOW); // Activate second electromagnet
+            break;
+        case 2:
+            digitalWrite(FrontElectromagnetPin, LOW); // Activate third electromagnet
             break;
         default:
             Serial.println("Invalid electromagnet index!");

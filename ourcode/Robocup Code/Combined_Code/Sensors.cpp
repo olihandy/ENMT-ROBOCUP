@@ -1,14 +1,15 @@
 #include "Sensors.h"
 #include "SensorBuffering.h"
 
-#define BUFFER_SIZE 20
+#define BUFFER_SIZE 5
+
 const int numReadings = 7;
 
 circBuf_t TOFbuffers[numReadings];
 
 int elapsed_time = 0;
 unsigned long lastChangeTime = 0; // Timestamp of the last change
-const unsigned long timeoutDuration = 2000; // 2 seconds
+const unsigned long timeoutDuration = 5000; // 2 seconds
 
 const int sensorErrorValue = 819;
 const int maxSensorValue = 115;

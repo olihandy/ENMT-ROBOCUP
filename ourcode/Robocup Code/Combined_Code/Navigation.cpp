@@ -11,7 +11,7 @@ bool homeReached = false;
 int NOCHANGETHRESHOLD = 5;
 int timeWeightDetected;
 
-int motortime = 10;
+int motortime = 100;
 
 WallDetectionState wallState = NO_WALL;
 RobotState currentState = STARTING;
@@ -162,9 +162,9 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
       case STARTING:
         // Take start readings, then set readyToDrive
         if (TopLeft > (TopRight + 20)) {
-          forward_left(3*motortime);
+          forward_left(motortime);
         } else {
-          forward_right(3*motortime);
+          forward_right(motortime);
         }
         ReadyToDrive = true;
 
@@ -184,14 +184,14 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
                 full_forward(motortime);
                 break;
               case LEFT_WALL_DETECTED:
-                full_turn_right(3*motortime);
+                full_turn_right(motortime);
                 break;
               case SLAB_WALL_DETECTED:
-                full_reverse(100*motortime);
-                if (TopLeft > (TopRight + 20)) {
-                  full_turn_left(10*motortime);
+                full_reverse(10*motortime);
+                if (TopLeft > (TopRight)) {
+                  full_turn_left(5*motortime);
                 } else {
-                  full_turn_right(10*motortime);
+                  full_turn_right(5*motortime);
                 }
                 break;
               case RIGHT_WALL_DETECTED:
@@ -222,10 +222,13 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
             if((millis() - timeWeightDetected) > timeoutDuration) {
               weightState = WEIGHT_NOT_DETECTED;
             }
-            if(NumWeightsCollected > 0) {
-              stop(5*motortime);
+            if(NumWeightsCollected == 0) {
+              half_forward(motortime);
+            }else if(NumWeightsCollected > 0) {
+              stop(motortime);
               go_down();
-              half_forward(motortime * (30 - 10 * NumWeightsCollected ));
+              half_forward(motortime * (15 - NumWeightsCollected));
+              stop(motortime);
               currentState = COLLECTING_WEIGHT;
             }
             if (BackInduction) {
@@ -276,8 +279,15 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
 
       case RETURNING_HOME:
         stop(motortime);
+        homeReached = 1;
         if (homeReached) {
-          // Drop weights
+          stop(motortime);
+          go_down();
+          turn_off_electromagnet(1);
+          turn_off_electromagnet(2);
+          turn_off_electromagnet(3);
+          delay(10);
+          go_up();
         }
         break;
     }
@@ -301,8 +311,8 @@ void UpdateAll(void) {
     // If no change detected within the timeout duration, execute reverse navigation
     if (millis() - lastChangeTime > timeoutDuration) {
         Serial.println("No sensor change detected for 5 seconds. Executing reverse navigation.");
-        full_reverse(100 * motortime);
-        full_turn_right(100 * motortime);
+        full_reverse(10 * motortime);
+        full_turn_right(10 * motortime);
     } else {
         // Normal navigation logic based on updated sensor data
         Navigation(GetAverageTOFReading(0), GetAverageTOFReading(1), GetAverageTOFReading(2), 
