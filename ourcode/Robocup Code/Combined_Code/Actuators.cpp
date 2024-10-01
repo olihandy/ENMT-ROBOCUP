@@ -3,7 +3,7 @@
 //Motor setup
 Servo myservoA, myservoB;  // create servo object to control a servo
 int stop_speed = 1500;     // Variable to change direction of movement, 1500 = stop, 1900 = full speed foward, 1100 = full back
-int full_reverse_speed = 1900;
+int full_reverse_speed = 1950;
 int full_forward_speed = 1100;
 int half_reverse_speed = 1750;
 int half_forward_speed = 1250;
@@ -17,7 +17,12 @@ int BackElectromagnetPin = 14;
 //001000
 //000000101
 
-int num_steps = 67000; // To be optimised
+int num_steps = 67000; // Fully down and up
+
+int big_step = 62000;
+int little_step = 5000;
+int teeny_step = 1000;
+
 int MAdirpin = 32;
 int MAsteppin = 33;
 int MBdirpin = 30;
@@ -116,11 +121,12 @@ void go_down(void) {
   }
 }
 
-void go_up(void) {
-  digitalWrite(MAdirpin,HIGH);
-  digitalWrite(MBdirpin,HIGH);
-
-    for(int j=0;j<=num_steps;j++)            //Move 1000 steps up
+void little_step_down(void) {
+  
+  digitalWrite(MAdirpin,LOW);
+  digitalWrite(MBdirpin,LOW);
+  
+  for(int j=0;j<=little_step;j++)            //Move 1000 steps down
   {
     digitalWrite(MAsteppin,LOW);
     digitalWrite(MBsteppin,LOW);
@@ -131,6 +137,52 @@ void go_up(void) {
   }
 }
 
+void big_step_down(void) {
+  
+  digitalWrite(MAdirpin,LOW);
+  digitalWrite(MBdirpin,LOW);
+  
+  for(int j=0;j<=big_step;j++)            //Move 1000 steps down
+  {
+    digitalWrite(MAsteppin,LOW);
+    digitalWrite(MBsteppin,LOW);
+    delayMicroseconds(20);
+    digitalWrite(MAsteppin,HIGH);
+    digitalWrite(MBsteppin,HIGH);
+    delayMicroseconds(20);
+  }
+}
+
+void go_up(void) {
+  digitalWrite(MAdirpin,HIGH);
+  digitalWrite(MBdirpin,HIGH);
+
+  for(int j=0;j<=num_steps;j++)            //Move 1000 steps up
+  {
+    digitalWrite(MAsteppin,LOW);
+    digitalWrite(MBsteppin,LOW);
+    delayMicroseconds(20);
+    digitalWrite(MAsteppin,HIGH);
+    digitalWrite(MBsteppin,HIGH);
+    delayMicroseconds(20);
+  }
+}
+
+void little_step_up(void) {
+
+  digitalWrite(MAdirpin,HIGH);
+  digitalWrite(MBdirpin,HIGH);
+
+  for(int j=0;j<=teeny_step;j++)            //Move 1000 steps up
+  {
+    digitalWrite(MAsteppin,LOW);
+    digitalWrite(MBsteppin,LOW);
+    delayMicroseconds(20);
+    digitalWrite(MAsteppin,HIGH);
+    digitalWrite(MBsteppin,HIGH);
+    delayMicroseconds(20);
+  }
+}
 
 void turn_on_electromagnet(int index) {
     switch (index) {

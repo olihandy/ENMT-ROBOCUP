@@ -32,7 +32,8 @@ enum RobotState {
   STARTING,          // 0 = Starting
   DRIVING,           // 1 = Driving
   COLLECTING_WEIGHT, // 2 = Collecting Weight
-  RETURNING_HOME     // 3 = Returning Home
+  RETURNING_HOME,    // 3 = Returning Home
+  FINISHED           // 4 = Finished
 };
 
 // Declare the current robot state

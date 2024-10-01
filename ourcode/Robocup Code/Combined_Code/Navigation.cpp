@@ -6,6 +6,7 @@ bool ReadyToDrive = false;
 bool WeightDetected = false;
 int NumWeightsCollected = 0;
 bool TimeToGo = false;
+// int time = millis();
 bool homeReached = false;
 
 int NOCHANGETHRESHOLD = 5;
@@ -98,6 +99,8 @@ void PrintStates(void) {
         case RETURNING_HOME:
             Serial.println("RETURNING_HOME");
             break;
+        case FINISHED:
+            Serial.println("DONE WOOHOO!");
     }
 
     Serial.print("WeightState: ");
@@ -146,7 +149,7 @@ void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t Midd
     } 
     // Only update if weight is not confirmed
     else if (weightState != WEIGHT_CONFIRMED) {
-        if ((MiddleRight > (BottomRight)) || (MiddleLeft > (BottomLeft))) {
+        if ((MiddleRight > (BottomRight + 10)) || (MiddleLeft > (BottomLeft + 10))) {
             timeWeightDetected = millis();
             weightState = WEIGHT_DETECTED;
         } else {
@@ -184,7 +187,7 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
                 full_forward(motortime);
                 break;
               case LEFT_WALL_DETECTED:
-                full_turn_right(motortime);
+                forward_right(motortime);
                 break;
               case SLAB_WALL_DETECTED:
                 full_reverse(10*motortime);
@@ -195,7 +198,7 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
                 }
                 break;
               case RIGHT_WALL_DETECTED:
-                full_turn_left(motortime);
+                forward_left(motortime);
                 break;
              case NO_WALL:
              default:
@@ -222,20 +225,22 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
             if((millis() - timeWeightDetected) > timeoutDuration) {
               weightState = WEIGHT_NOT_DETECTED;
             }
+            
             if(NumWeightsCollected == 0) {
               half_forward(motortime);
+                if (BackInduction) {
+                stop(motortime);
+                go_down();
+                currentState = COLLECTING_WEIGHT;
+                }
             }else if(NumWeightsCollected > 0) {
               stop(motortime);
-              go_down();
-              half_forward(motortime * (15 - NumWeightsCollected));
+              big_step_down();
+              half_forward(10 * motortime);
               stop(motortime);
+              little_step_down();
               currentState = COLLECTING_WEIGHT;
             }
-            if (BackInduction) {
-              stop(5*motortime);
-              go_down();
-              currentState = COLLECTING_WEIGHT;
-              }
             break;
         }
         break;
@@ -244,7 +249,7 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
         if (NumWeightsCollected == 0) {
             turn_on_electromagnet(0);
             Serial.println("Electromagnet 0 activated");
-
+            stop(motortime);
             NumWeightsCollected++;
             go_up();
             weightState = WEIGHT_NOT_DETECTED;
@@ -252,6 +257,8 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
 
         } else if (NumWeightsCollected == 1) {
             turn_on_electromagnet(1);
+            stop(motortime);
+
             Serial.println("Electromagnet 1 activated");
            
             NumWeightsCollected++;
@@ -261,7 +268,7 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
         } else if (NumWeightsCollected == 2) {
             turn_on_electromagnet(2);
             Serial.println("Electromagnet 2 activated");
-           
+            stop(motortime);           
             go_up();
             currentState = DRIVING;
             weightState = WEIGHT_NOT_DETECTED;
@@ -283,13 +290,18 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
         if (homeReached) {
           stop(motortime);
           go_down();
+          turn_off_electromagnet(0);
           turn_off_electromagnet(1);
           turn_off_electromagnet(2);
-          turn_off_electromagnet(3);
-          delay(10);
+          stop(motortime);
           go_up();
+          NumWeightsCollected = 0;
+          currentState = FINISHED;
         }
         break;
+
+      case FINISHED:
+        stop(motortime);
     }
   }
 
@@ -324,3 +336,4 @@ void UpdateAll(void) {
     PrintInformation();
     PrintStates();
 }
+

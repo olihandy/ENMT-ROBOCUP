@@ -5,7 +5,7 @@
 void setup() {
   setupSensors();
   setupActuators();
-  delay(1000);
+  delay(2000);
 }
 
 void loop() {
