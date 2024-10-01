@@ -160,33 +160,24 @@ void UpdateWallState(uint32_t TopLeft, uint32_t TopMiddle, uint32_t TopRight) {
   }
 }
 
-int weightDetectionDuration = 5000; // Stay in WEIGHT_DETECTED for 5 seconds before reverting
-
 void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, bool FrontInduction) {
-    // If weight is confirmed by induction sensor, set to WEIGHT_CONFIRMED
+    // Confirm weight based on FrontInduction
     if (FrontInduction) {
-        weightState = WEIGHT_CONFIRMED;
-        return;
-    }
-
-    // Only proceed with weight detection if it's not already confirmed
-    if (weightState != WEIGHT_CONFIRMED) {
-        // Check if the TOF sensor readings suggest a weight is detected
+        // Set to WEIGHT_CONFIRMED only if it's not already confirmed
+        if (weightState != WEIGHT_CONFIRMED) {
+            weightState = WEIGHT_CONFIRMED;
+        }
+    } 
+    // Only update if weight is not confirmed
+    else if (weightState != WEIGHT_CONFIRMED) {
         if ((MiddleRight > (BottomRight + 10)) || (MiddleLeft > (BottomLeft + 10))) {
-            if (weightState != WEIGHT_DETECTED) {
-                // First time detecting weight, record the time
-                timeWeightDetected = millis();
-                weightState = WEIGHT_DETECTED;
-            }
+            timeWeightDetected = millis();
+            weightState = WEIGHT_DETECTED;
         } else {
-            // If no weight is detected by sensors and sufficient time has passed, reset to WEIGHT_NOT_DETECTED
-            if (weightState == WEIGHT_DETECTED && (millis() - timeWeightDetected) > five_seconds) {
-                weightState = WEIGHT_NOT_DETECTED;
-            }
+            weightState = WEIGHT_NOT_DETECTED;
         }
     }
 }
-
 
 void UpdateWeightPositionState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight) {
 
@@ -219,9 +210,6 @@ void UpdateWeightPositionState(uint32_t MiddleRight, uint32_t BottomRight, uint3
         WeightPosition = CLEAR;  // If neither side is close, it's clear
     }
 }
-
-
-
 
 void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_t MiddleLeft, uint32_t MiddleRight, uint32_t BottomLeft, uint32_t BottomRight, bool BackInduction) {
 
@@ -276,63 +264,70 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
               break;
 
           case WEIGHT_DETECTED:
-            UpdateWeightPositionState(MiddleRight, BottomRight, MiddleLeft, BottomLeft, TopMiddle, TopLeft, TopRight);
-            switch (WeightPosition) {
-              case CLEAR:
-                if(BottomLeft > 20 && BottomRight > 20) {
-                  if (BottomLeft > (BottomRight + 5)) {
-                    forward_right(motortime);
-                  } else if (BottomRight > (BottomLeft + 5)) {
-                    forward_left(motortime);
-                  } else {
-                    half_forward(10*motortime);
-                  }                  
-                } else {
-                  if (BottomLeft > (BottomRight + 5)) {
-                    full_turn_right(motortime);
-                  } else if (BottomRight > (BottomLeft + 5)) {
-                      full_turn_right(motortime);
-                  } else {
-                      half_forward(10*motortime);
-                  }
-                }
-                break;
-              case AGAINST_WALL:
-                full_reverse(5*motortime);
-                full_turn_left(5*motortime);
-                forward_right(10*motortime);
-                if(TopLeft < 20) {
-                  full_forward(motortime);
-                } else {
-                  forward_left(motortime);
-                }
-                break;
-              case LEFT_CLOSER_WALL:
-                reverse_left(5*motortime);
-                full_turn_left(5*motortime);
-                half_forward(motortime);
-                if(TopLeft < 20) {
-                  full_forward(motortime);
-                } else {
-                  forward_left(motortime);
-                }
-                break;
-              case RIGHT_CLOSER_WALL:
-                reverse_right(5*motortime);
-                full_turn_right(5*motortime);
-                half_forward(motortime);
-                if(TopRight < 20) {
-                  full_forward(motortime);
-                } else {
-                  forward_left(motortime);
-                }
-                break;
-              default:
-                full_forward(motortime);
-                break;
-            }
+            // UpdateWeightPositionState(MiddleRight, BottomRight, MiddleLeft, BottomLeft, TopMiddle, TopLeft, TopRight);
+            // switch (WeightPosition) {
+            //   case CLEAR:
+            //     if(BottomLeft > 20 && BottomRight > 20) {
+            //       if (BottomLeft > (BottomRight + 5)) {
+            //         forward_right(motortime);
+            //       } else if (BottomRight > (BottomLeft + 5)) {
+            //         forward_left(motortime);
+            //       } else {
+            //         half_forward(10*motortime);
+            //       }                  
+            //     } else {
+            //       if (BottomLeft > (BottomRight + 5)) {
+            //         full_turn_right(motortime);
+            //       } else if (BottomRight > (BottomLeft + 5)) {
+            //           full_turn_right(motortime);
+            //       } else {
+            //           half_forward(10*motortime);
+            //       }
+            //     }
+            //     break;
+            //   case AGAINST_WALL:
+            //     full_reverse(5*motortime);
+            //     full_turn_left(5*motortime);
+            //     forward_right(10*motortime);
+            //     if(TopLeft < 20) {
+            //       full_forward(motortime);
+            //     } else {
+            //       forward_left(motortime);
+            //     }
+            //     break;
+            //   case LEFT_CLOSER_WALL:
+            //     reverse_left(5*motortime);
+            //     full_turn_left(5*motortime);
+            //     half_forward(motortime);
+            //     if(TopLeft < 20) {
+            //       full_forward(motortime);
+            //     } else {
+            //       forward_left(motortime);
+            //     }
+            //     break;
+            //   case RIGHT_CLOSER_WALL:
+            //     reverse_right(5*motortime);
+            //     full_turn_right(5*motortime);
+            //     half_forward(motortime);
+            //     if(TopRight < 20) {
+            //       full_forward(motortime);
+            //     } else {
+            //       forward_left(motortime);
+            //     }
+            //     break;
+            //   default:
+            //     full_forward(motortime);
+            //     break;
+            // }
+            // break;
+            if (BottomLeft > (BottomRight + 5)) {
+              forward_right(motortime);
+            } else if (BottomRight > (BottomLeft + 5)) {
+              forward_left(motortime);
+            } else {
+              half_forward(10*motortime);
+            } 
             break;
-
           case WEIGHT_CONFIRMED:
             if((millis() - timeWeightDetected) > timeoutDuration) {
               weightState = WEIGHT_NOT_DETECTED;
