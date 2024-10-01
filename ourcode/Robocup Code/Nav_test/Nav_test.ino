@@ -26,15 +26,7 @@ int Xacclist[50] = { 0 };
 int Yacclist[50] = { 0 };
 int AverageAccelerationX = 0;
 int AverageAccelerationY = 0;
-// int CurrentposZ = 0;
-// int PrevPositionX = 0;
-// int PrevpositionY = 0;
-// int* OrienlistX;
-// int* OrienlistY;
 double prevtime = 0.0;
-//int PrevOrienZ = 0;
-//int CurrentOrienX;
-//int CurrentOrienY;
 int CurrentOrienZ = 0;
 int AverageAngaccZ = 0;
 int AngaccZList[50] = { 0 };
@@ -99,6 +91,26 @@ int timedelay = 10;  //time in milliseconds, do not comment this out
 // static long durationA, durationB, TopLeft, TopRight;
 
 
+//Encoder Setup
+enum PinAssignments {
+  encoder1PinA = 2,
+  encoder1PinB = 3,
+  
+  encoder2PinA = 4,
+  encoder2PinB = 5,
+};
+
+volatile unsigned int encoderPos1 = 0;
+unsigned int lastReportedPos1 = 1;
+volatile unsigned int encoderPos2 = 0;
+unsigned int lastReportedPos2 = 1;
+
+boolean A_set1 = false;
+boolean B_set1 = false;
+boolean A_set2 = false;
+boolean B_set2 = false;
+
+
 
 //IMU setup
 
@@ -161,6 +173,16 @@ void setup()  //Need one setup function
   digitalWrite(LED2, LOW);
   digitalWrite(LED3, LOW);  
   digitalWrite(LED4, LOW);   //These will only be called once
+
+  //Encoder
+  pinMode(encoder1PinA, INPUT);       //Set encoder pins as inputs
+  pinMode(encoder1PinB, INPUT); 
+  pinMode(encoder2PinA, INPUT); 
+  pinMode(encoder2PinB, INPUT); 
+  myservoA.attach(0);  // attaches the servo  to the servo object useing pin 0
+  myservoB.attach(1);  // attaches the servo  to the servo object useing pin 1
+  attachInterrupt(digitalPinToInterrupt(2), doEncoder1A, CHANGE);  //Set up an interrupt for each encoder
+  attachInterrupt(digitalPinToInterrupt(4), doEncoder2A, CHANGE);
 
 
   //ElectroMagnet
@@ -440,25 +462,53 @@ void IMUGetPos(void) {
   printEvent(&linearAccelData);
   //printEvent(&gravityData);
 
-  int8_t boardTemp = bno.getTemp();
+  int8_t boardTemp = bno.getTemp();  //Can remove this
   Serial.println();
   Serial.print(F("temperature: "));
   Serial.println(boardTemp);
 
-  uint8_t system, gyro, accel, mag = 0;
-  bno.getCalibration(&system, &gyro, &accel, &mag);
-  Serial.println();
-  Serial.print("Calibration: Sys=");
-  Serial.print(system);
-  Serial.print(" Gyro=");
-  Serial.print(gyro);
-  Serial.print(" Accel=");
-  Serial.print(accel);
-  Serial.print(" Mag=");
-  Serial.println(mag);
+  // uint8_t system, gyro, accel, mag = 0;
+  // bno.getCalibration(&system, &gyro, &accel, &mag);  
+  // Serial.println();
+  // Serial.print("Calibration: Sys=");
+  // Serial.print(system);
+  // Serial.print(" Gyro=");
+  // Serial.print(gyro);
+  // Serial.print(" Accel=");
+  // Serial.print(accel);
+  // Serial.print(" Mag=");
+  // Serial.println(mag);
   
   Serial.println("--");
   //delay(BNO055_SAMPLERATE_DELAY_MS);
+}
+
+void colorStart() {
+  clear_Start = colorlist[0];
+  red_Start = colorlist[1];
+  green_Start = colorlist[2];
+  blue_Start = colorlist[3]; 
+}
+
+bool ColorCompareHome() {
+  if (colorlist[0] == clear_Start) {
+    if (colorlist[1] == red_Start) {
+      if (colorlist[2] == green_Start) {
+        if (colorlist[3] == blue_Start) {
+          bool ColorCompareHome = true;
+        } else {
+          bool ColorCompareHome = true;
+        }
+      } else {
+        bool ColorCompareHome = true;
+      }
+    } else {
+      bool ColorCompareHome = true;
+    }
+  } else {
+    bool ColorCompareHome = false;
+  }
+  return ColorCompareHome;
 }
 
 
@@ -492,38 +542,46 @@ void loop() {
   // Serial.println(ori[1]);
   // Serial.println(acc[2]); //Angular Z orientation/acceleration obtained
   // Serial.println(ori[2]);
-  for (uint16_t element=0; element<50; element++){                 //shifting the window of detected accelerations for X
+  for (uint16_t element=0; element<=48; element++){                 //shifting the window of detected accelerations for X
     Xacclist[element+1] = Xacclist[element];
   }
   Xacclist[0] = acc[0];  //Getting data from x accelerations
   AverageAccelerationX = 0;
-  for (uint16_t averagingelement = 0; averagingelement < 50; averagingelement++) {  //Averaging the list of detect x accelerations
+  for (uint16_t averagingelement = 0; averagingelement<=49; averagingelement++) {  //Averaging the list of detect x accelerations
     AverageAccelerationX += Xacclist[averagingelement];
   }
   AverageAccelerationX = AverageAccelerationX / 50; //50 is elements in moving average filter
 
-  for (uint16_t element = 0; element < 50; element++) {  //shifting the window of detected accelerations for Y
+  for (uint16_t element = 0; element<=48; element++) {  //shifting the window of detected accelerations for Y
     Yacclist[element + 1] = Yacclist[element];
   }
   Yacclist[0] = acc[1]; //Getting data from y accelerations
   AverageAccelerationY = 0;
-  for (uint16_t averagingelement = 0; averagingelement < 49; averagingelement++) {  //Averaging the list of detect y accelerations
+  for (uint16_t averagingelement = 0; averagingelement<=49; averagingelement++) {  //Averaging the list of detect y accelerations
     AverageAccelerationY += Yacclist[averagingelement];
   }
   AverageAccelerationY = AverageAccelerationY / 50;
 
-  for (uint16_t element = 0; element < 50; element++) {  //shifting the window of detected accelerations for Z orientations
+  for (uint16_t element = 0; element<=48; element++) {  //shifting the window of detected accelerations for Z orientations
     AngaccZList[element + 1] = AngaccZList[element];
   }
   AngaccZList[0] = ori[2]; //Getting data
   AverageAngaccZ = 0;
-  for (uint16_t averagingelement = 0; averagingelement < 50; averagingelement++) {  //Averaging the list of detect Z orientations
+  for (uint16_t averagingelement = 0; averagingelement<=49; averagingelement++) {  //Averaging the list of detect Z orientations
     AverageAngaccZ += AngaccZList[averagingelement];
   }
   AverageAngaccZ = AverageAngaccZ / 50;
   Serial.println("List");
-  Serial.println(double(Xacclist[0]));
-  Serial.println(AverageAccelerationX); //This has somehow been swapped with Z
+  Serial.println(double(acc[0]));
+  Serial.println(double(acc[1]));
+  // Serial.println(double(acc[2]));
+  Serial.println("-");
+  // Serial.println(double(ori[0]));
+  // Serial.println(double(ori[1]));
+  Serial.println(double(ori[2]));
+  Serial.println(AverageAccelerationX); 
+  Serial.println(AverageAccelerationY); 
+  Serial.println(AverageAngaccZ); 
   Serial.println(Yacclist[0]);
   Serial.println(AngaccZList[0]);
   Serial.println(Xacclist[49]);
@@ -536,10 +594,10 @@ void loop() {
   Serial.println(Timedif);
   prevtime = millis()/1000;  //Time difference for integration
 
-  CurrentposX += (int(AverageAccelerationX) * pow(Timedif * 50, 2));  //Getting the x position from moving average filter, need pow function in Arduino for powers, differentiation
+  CurrentposX += (int(AverageAccelerationX) * pow(Timedif, 2));  //Getting the x position from moving average filter, need pow function in Arduino for powers, differentiation
   Serial.print("X: ");
   Serial.print(CurrentposX);
-  CurrentposY += (int(AverageAccelerationY) * pow(Timedif * 50, 2));  //y
+  CurrentposY += (int(AverageAccelerationY) * pow(Timedif, 2));  //y
   Serial.print("Y: ");
   Serial.print(CurrentposY);
   CurrentOrienZ = int(AverageAngaccZ);  //orientation in Z
@@ -547,8 +605,39 @@ void loop() {
   Serial.print(AverageAngaccZ);
   Serial.print("\n");
 
+  //Encoder Part, will rely on the IMU in turns      
+  if ((lastReportedPos1 != encoderPos1)||(lastReportedPos2 != encoderPos2)) 
+  {
+    Serial.print("Movement");
+    lastReportedPos1 = encoderPos1;
+    lastReportedPos2 = encoderPos2;
+  }
 
+  
+  if (encoderPos1-encoderPos2 > 10 || encoderPos1-encoderPos2 < 10) {
+    //Set IMU Positions to 0, and mTravels to 0
+    Serial.print("IMU used in turns for angles");
+    //IMU gets 
+    double mTravelEncoderLeft = 0;
+    double mTravelEncoderRight = 0;
+    //StraightTotalTravelxpara = IMU with trig
+    //StraightTotalTravelyperp = 
+  } else {
+    Serial.print("Index:");
+    Serial.print(encoderPos1, DEC); //These are in counts which are Pulses Per Revolution*4
+    double mTravelEncoderLeft = (encoderPos1/4)*(0.421/663);
+    Serial.print(":");
+    Serial.print(encoderPos2, DEC);
+    double mTravelEncoderRight = (encoderPos2/4)*(0.421/663);
+    Serial.println();
+    int StraightTotalTravelxperp = (mTravelEncoderLeft+mTravelEncoderRight)/2*sin(double(CurrentOrienZ)); //Encoder with 
+    int StraightTotalTravelypara = (mTravelEncoderLeft+mTravelEncoderRight)/2*cos(double(CurrentOrienZ));
+  }
+  
+  
+  
 
+  //Color sensor detection
   colorSensorDetect(colorlist);
   Serial.print("Color: ");
   Serial.print(colorlist[0]);
@@ -561,12 +650,17 @@ void loop() {
   Serial.print("\t");
 
   if (elapsed_time==0) {
-    clear_Start = colorlist[0];
-    red_Start = colorlist[1];
-    green_Start = colorlist[2];
-    blue_Start = colorlist[3]; 
+    colorStart();
+  }
+
+  if (elapsed_time>100) {
+    bool home = ColorCompareHome();
+    if (home == 1){
+      Serial.println("Home");
+    }
   }
   
+  //Electromagnet status
   Serial.print("ElectroMagnet Status: ");
   Serial.print(ElectroMagnet1On);
   Serial.print(ElectroMagnet2On);
@@ -804,56 +898,27 @@ void loop() {
   Serial.println(); //Next line
 }
 
+// Interrupt on A changing state
+void doEncoder1A(){
+  // Test transition
+  A_set1 = digitalRead(encoder1PinA) == HIGH;
+  // and adjust counter + if A leads B
+  encoderPos1 += (A_set1 != B_set1) ? +1 : -1;
+  
+  B_set1 = digitalRead(encoder1PinB) == HIGH;
+  // and adjust counter + if B follows A
+  encoderPos1 += (A_set1 == B_set1) ? +1 : -1;
+}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
-
-
-
-
-        //If robot is against a wall where does it go? The following is future code for later if two ultrasonic sensors are used
-        //int directionCheckarray[20] = {0}; //An array of distances as the robot rotates when it detects a wall
-        //int8_t it_num = 0;
-        //int32_t MaxCM = 0;
-        //int8_t MaxCMElement = 0;
-        //if (TopLeft>TopRight) {
-          //full_turn_left(timedelay);
-          //Get IMU heading
-          //if IMU heading is less than 360 degrees
-            //A_read();
-            //B_read();
-            //directionCheckarray[it_num] = [(TopLeft+TopRight)/2];
-            //if ((TopLeft+TopRight)/2 > (MaxCMElement)){
-              //MaxCM = (TopLeft+TopRight)/2;
-              //MaxCMElement = TopLeft;
-            //}
-            //it_num++;
-            //full_turn_left(timedelay);
-          //for (i=0; i<(it_num-MaxCMElement), i++){
-            //full_turn_right(timedelay);
-          //}
-        //} else {
-          //full_turn_right(timedelay);
-        //}
-        //programState = 0;
-
-      //Detecting weights using lower TOF:
-      //If an object is found closer than the ultrasonic distance, it is an interrupt with a higher proiority than the turning process, will stop rotating and go forward at full power, then leaves the interruyptr
-
-  //PrevPositionX = CurrentposX;
-  //PrevOrienZ = CurrentOrienZ;
-//}
+// Interrupt on A changing state
+void doEncoder2A(){
+  // Test transition
+  A_set2 = digitalRead(encoder2PinA) == HIGH;
+  // and adjust counter + if A leads B
+  encoderPos2 += (A_set2 != B_set2) ? +1 : -1;
+  
+   B_set2 = digitalRead(encoder2PinB) == HIGH;
+  // and adjust counter + if B follows A
+  encoderPos2 += (A_set2 == B_set2) ? +1 : -1;
+}
