@@ -1,7 +1,7 @@
 #include "Actuators.h"
 
 //Motor setup
-Servo myservoA, myservoB;  // create servo object to control a servo
+Servo myservoA, myservoB;  // create servo object to control a servo, A IS LEFT
 int stop_speed = 1500;     // Variable to change direction of movement, 1500 = stop, 1900 = full speed foward, 1100 = full back
 int full_reverse_speed = 1950;
 int full_forward_speed = 1100;
@@ -54,6 +54,20 @@ void full_reverse(int timedelay) {
   delay(timedelay);
 }
 
+void reverse_left(int timedelay) {
+  myservoA.writeMicroseconds(half_reverse_speed);
+  myservoB.writeMicroseconds(full_reverse_speed);
+
+  delay(timedelay);
+}
+
+void reverse_right(int timedelay) {
+  myservoA.writeMicroseconds(full_reverse_speed);
+  myservoB.writeMicroseconds(half_reverse_speed);
+
+  delay(timedelay);
+}
+
 void stop(int timedelay) {
   myservoA.writeMicroseconds(stop_speed);
   myservoB.writeMicroseconds(stop_speed);
@@ -87,11 +101,6 @@ void forward_right(int timedelay) {
   delay(timedelay);
 }
 
-void directioncheck_right(int timedelay) {
-  myservoA.writeMicroseconds(full_reverse_speed);
-  myservoB.writeMicroseconds(full_forward_speed);
-  delay(timedelay * 3);  //Will be replaced by IMU code
-}
 
 void full_turn_left(int timedelay) {
   myservoA.writeMicroseconds(full_forward_speed);
@@ -168,21 +177,6 @@ void go_up(void) {
   }
 }
 
-void little_step_up(void) {
-
-  digitalWrite(MAdirpin,HIGH);
-  digitalWrite(MBdirpin,HIGH);
-
-  for(int j=0;j<=teeny_step;j++)            //Move 1000 steps up
-  {
-    digitalWrite(MAsteppin,LOW);
-    digitalWrite(MBsteppin,LOW);
-    delayMicroseconds(20);
-    digitalWrite(MAsteppin,HIGH);
-    digitalWrite(MBsteppin,HIGH);
-    delayMicroseconds(20);
-  }
-}
 
 void turn_on_electromagnet(int index) {
     switch (index) {

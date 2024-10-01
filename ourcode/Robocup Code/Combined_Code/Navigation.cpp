@@ -1,6 +1,7 @@
 #include "Navigation.h"
 #include "Sensors.h"
 
+// LENGTH OF ROBOT ~ 35
 // Define shared variables here
 bool ReadyToDrive = false;
 bool WeightDetected = false;
@@ -8,6 +9,8 @@ int NumWeightsCollected = 0;
 bool TimeToGo = false;
 // int time = millis();
 bool homeReached = false;
+
+int LengthOfRobot = 35;
 
 int NOCHANGETHRESHOLD = 5;
 int timeWeightDetected;
@@ -158,6 +161,23 @@ void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t Midd
     }
 }
 
+void UpdateWeightPositionState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, uint32_t TopMiddle) {
+
+  if((MiddleRight < LengthOfRobot) && (MiddleLeft < LengthOfRobot)) {
+    if(TopMiddle < LengthOfRobot) {
+      WeightPosition = AGAINST_SLAB;
+    } else if(MiddleLeft < MiddleRight + 5) {
+      WeightPosition = LEFT_CLOSER_WALL;
+    } else if (MiddleRight < MiddleLeft + 5) {
+      WeightPosition = RIGHT_CLOSER_WALL;
+    } else {
+      WeightPosition = AGAINST_WALL;
+    }
+  else {
+    WeightPosition = CLEAR;
+  }
+}
+
 
 void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_t MiddleLeft, uint32_t MiddleRight, uint32_t BottomLeft, uint32_t BottomRight, bool BackInduction) {
 
@@ -212,12 +232,57 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
               break;
 
           case WEIGHT_DETECTED:
-            if (BottomLeft > (BottomRight + 2)) {
-              forward_right(motortime);
-            } else if (BottomRight > (BottomLeft + 2)) {
-              forward_left(motortime);
-            } else {
-              half_forward(motortime);
+            UpdateWeightPositionState(MiddleRight, BottomRight, MiddleLeft, BottomLeft, TopMiddle);
+            switch (WeightPosition)
+              case CLEAR:
+                if (BottomLeft > (BottomRight + 5)) {
+                  forward_right(motortime);
+                } else if (BottomRight > (BottomLeft + 5)) {
+                  forward_left(motortime);
+                } else {
+                  half_forward(motortime);
+                }
+                break;
+              case AGAINST_WALL:
+                full_reverse(5*motortime);
+                full_turn_left(5*motortime);
+                forward_right(10*motortime);
+                if(TopLeft < 20) {
+                  forward(motortime);
+                } else {
+                  forward_left(motortime);
+                }
+                break;
+              case LEFT_CLOSER_WALL:
+                reverse_left(5*motortime);
+                full_turn_left(5*motortime);
+                half_forward(motortime);
+                if(TopLeft < 20) {
+                  forward(motortime);
+                } else {
+                  forward_left(motortime);
+                }
+                break;
+              case RIGHT_CLOSER_WALL:
+                reverse_right(5*motortime);
+                full_turn_right(5*motortime);
+                half_forward(motortime);
+                if(TopRight < 20) {
+                  forward(motortime);
+                } else {
+                  forward_left(motortime);
+                }
+                break;
+              case AGAINST_SLAB:
+                full_reverse(5*motortime);
+                full_turn_left(5*motortime);
+                forward_right(10*motortime);
+                if(TopLeft < 20) {
+                  forward(motortime);
+                } else {
+                  forward_left(motortime);
+                }
+                break;              
             }
             break;
 
