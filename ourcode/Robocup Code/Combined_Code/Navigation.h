@@ -53,18 +53,17 @@ enum WeightPositionState {
   CLEAR,
   AGAINST_WALL,
   LEFT_CLOSER_WALL,
-  RIGHT_CLOSER_WALL,
-  AGAINST_SLAB
+  RIGHT_CLOSER_WALL
 };
 
-extern WeightPositionState weightPosition;
+extern WeightPositionState WeightPosition;
 
 
 // Function prototypes
 extern void PrintStates(void);
 extern void UpdateWallState(uint32_t TopLeft, uint32_t TopMiddle, uint32_t TopRight);
 extern void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, bool FrontInduction);
-extern void UpdateWeightPositionState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, uint32_t TopMiddle);
+extern void UpdateWeightPositionState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight);
 extern void UpdateAll(void);
 extern void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_t MiddleLeft, uint32_t MiddleRight, uint32_t BottomLeft, uint32_t BottomRight, bool BackInduction);
 

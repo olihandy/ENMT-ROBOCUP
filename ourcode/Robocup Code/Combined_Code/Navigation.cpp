@@ -12,6 +12,7 @@ bool homeReached = false;
 
 int LengthOfRobot = 35;
 
+int five_seconds = 5000;
 int NOCHANGETHRESHOLD = 5;
 int timeWeightDetected;
 
@@ -20,6 +21,7 @@ int motortime = 100;
 WallDetectionState wallState = NO_WALL;
 RobotState currentState = STARTING;
 WeightDetectionState weightState = WEIGHT_NOT_DETECTED;
+WeightPositionState WeightPosition = CLEAR;
 
 // Add these global variables to store previous sensor states
 uint16_t prevTOFReadings[7];
@@ -119,6 +121,22 @@ void PrintStates(void) {
             break;
     }
 
+    Serial.print("WeightPosition: ");
+    switch (WeightPosition) {
+        case CLEAR:
+            Serial.println("CLEAR");
+            break;
+        case AGAINST_WALL:
+            Serial.println("AGAINST_WALL");
+            break;
+        case LEFT_CLOSER_WALL:
+            Serial.println("LEFT_CLOSER_WALL");
+            break;
+        case RIGHT_CLOSER_WALL:
+            Serial.println("RIGHT_CLOSER_WALL");
+            break;                   
+    }    
+
     Serial.println("----------------------");
 }
 
@@ -142,41 +160,67 @@ void UpdateWallState(uint32_t TopLeft, uint32_t TopMiddle, uint32_t TopRight) {
   }
 }
 
+int weightDetectionDuration = 5000; // Stay in WEIGHT_DETECTED for 5 seconds before reverting
+
 void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, bool FrontInduction) {
-    // Confirm weight based on FrontInduction
+    // If weight is confirmed by induction sensor, set to WEIGHT_CONFIRMED
     if (FrontInduction) {
-        // Set to WEIGHT_CONFIRMED only if it's not already confirmed
-        if (weightState != WEIGHT_CONFIRMED) {
-            weightState = WEIGHT_CONFIRMED;
-        }
-    } 
-    // Only update if weight is not confirmed
-    else if (weightState != WEIGHT_CONFIRMED) {
+        weightState = WEIGHT_CONFIRMED;
+        return;
+    }
+
+    // Only proceed with weight detection if it's not already confirmed
+    if (weightState != WEIGHT_CONFIRMED) {
+        // Check if the TOF sensor readings suggest a weight is detected
         if ((MiddleRight > (BottomRight + 10)) || (MiddleLeft > (BottomLeft + 10))) {
-            timeWeightDetected = millis();
-            weightState = WEIGHT_DETECTED;
+            if (weightState != WEIGHT_DETECTED) {
+                // First time detecting weight, record the time
+                timeWeightDetected = millis();
+                weightState = WEIGHT_DETECTED;
+            }
         } else {
-            weightState = WEIGHT_NOT_DETECTED;
+            // If no weight is detected by sensors and sufficient time has passed, reset to WEIGHT_NOT_DETECTED
+            if (weightState == WEIGHT_DETECTED && (millis() - timeWeightDetected) > five_seconds) {
+                weightState = WEIGHT_NOT_DETECTED;
+            }
         }
     }
 }
 
-void UpdateWeightPositionState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, uint32_t TopMiddle) {
 
-  if((MiddleRight < LengthOfRobot) && (MiddleLeft < LengthOfRobot)) {
-    if(TopMiddle < LengthOfRobot) {
-      WeightPosition = AGAINST_SLAB;
-    } else if(MiddleLeft < MiddleRight + 5) {
-      WeightPosition = LEFT_CLOSER_WALL;
-    } else if (MiddleRight < MiddleLeft + 5) {
-      WeightPosition = RIGHT_CLOSER_WALL;
-    } else {
-      WeightPosition = AGAINST_WALL;
+void UpdateWeightPositionState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight) {
+
+    // If the robot is in the CLEAR state, do not update the state until a weight is collected
+    if (WeightPosition == CLEAR && weightState != WEIGHT_CONFIRMED) {
+        return;  // Remain in CLEAR state until a weight is detected and confirmed
     }
-  else {
-    WeightPosition = CLEAR;
-  }
+
+    // First, check TopMiddle
+    if (TopMiddle < LengthOfRobot) {
+        // Check which side is closer by comparing TopLeft and TopRight
+        if (TopLeft > TopRight) {
+            WeightPosition = LEFT_CLOSER_WALL;
+        } else if (TopRight > TopLeft) {
+            WeightPosition = RIGHT_CLOSER_WALL;
+        } else {
+            WeightPosition = AGAINST_WALL;  // If they are about the same, assume it's against the wall
+        }
+    }
+    // If TopMiddle is not close enough, check side proximity
+    else if ((MiddleRight < LengthOfRobot) && (MiddleLeft < LengthOfRobot)) {
+        if (MiddleLeft < MiddleRight + 5) {
+            WeightPosition = LEFT_CLOSER_WALL;
+        } else if (MiddleRight < MiddleLeft + 5) {
+            WeightPosition = RIGHT_CLOSER_WALL;
+        } else {
+            WeightPosition = AGAINST_WALL;  // Both sides are almost equal, consider it against the wall
+        }
+    } else {
+        WeightPosition = CLEAR;  // If neither side is close, it's clear
+    }
 }
+
+
 
 
 void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_t MiddleLeft, uint32_t MiddleRight, uint32_t BottomLeft, uint32_t BottomRight, bool BackInduction) {
@@ -232,15 +276,25 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
               break;
 
           case WEIGHT_DETECTED:
-            UpdateWeightPositionState(MiddleRight, BottomRight, MiddleLeft, BottomLeft, TopMiddle);
-            switch (WeightPosition)
+            UpdateWeightPositionState(MiddleRight, BottomRight, MiddleLeft, BottomLeft, TopMiddle, TopLeft, TopRight);
+            switch (WeightPosition) {
               case CLEAR:
-                if (BottomLeft > (BottomRight + 5)) {
-                  forward_right(motortime);
-                } else if (BottomRight > (BottomLeft + 5)) {
-                  forward_left(motortime);
+                if(BottomLeft > 20 && BottomRight > 20) {
+                  if (BottomLeft > (BottomRight + 5)) {
+                    forward_right(motortime);
+                  } else if (BottomRight > (BottomLeft + 5)) {
+                    forward_left(motortime);
+                  } else {
+                    half_forward(10*motortime);
+                  }                  
                 } else {
-                  half_forward(motortime);
+                  if (BottomLeft > (BottomRight + 5)) {
+                    full_turn_right(motortime);
+                  } else if (BottomRight > (BottomLeft + 5)) {
+                      full_turn_right(motortime);
+                  } else {
+                      half_forward(10*motortime);
+                  }
                 }
                 break;
               case AGAINST_WALL:
@@ -248,7 +302,7 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
                 full_turn_left(5*motortime);
                 forward_right(10*motortime);
                 if(TopLeft < 20) {
-                  forward(motortime);
+                  full_forward(motortime);
                 } else {
                   forward_left(motortime);
                 }
@@ -258,7 +312,7 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
                 full_turn_left(5*motortime);
                 half_forward(motortime);
                 if(TopLeft < 20) {
-                  forward(motortime);
+                  full_forward(motortime);
                 } else {
                   forward_left(motortime);
                 }
@@ -268,21 +322,14 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
                 full_turn_right(5*motortime);
                 half_forward(motortime);
                 if(TopRight < 20) {
-                  forward(motortime);
+                  full_forward(motortime);
                 } else {
                   forward_left(motortime);
                 }
                 break;
-              case AGAINST_SLAB:
-                full_reverse(5*motortime);
-                full_turn_left(5*motortime);
-                forward_right(10*motortime);
-                if(TopLeft < 20) {
-                  forward(motortime);
-                } else {
-                  forward_left(motortime);
-                }
-                break;              
+              default:
+                full_forward(motortime);
+                break;
             }
             break;
 

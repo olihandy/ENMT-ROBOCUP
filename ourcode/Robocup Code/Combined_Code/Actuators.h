@@ -35,7 +35,7 @@ extern int MBsteppin;
 extern void setupActuators();
 extern void full_reverse(int timedelay);
 extern void reverse_left(int timedelay);
-extern void reverse_riht(int timedelay);
+extern void reverse_right(int timedelay);
 extern void stop(int timedelay);
 extern void full_forward(int timedelay);
 extern void half_forward(int timedelay);
