@@ -28,8 +28,9 @@ int AverageAccelerationX = 0;
 int AverageAccelerationY = 0;
 double prevtime = 0.0;
 int CurrentOrienZ = 0;
-int AverageAngaccZ = 0;
+int AverageAngZ = 0;
 int AngaccZList[50] = { 0 };
+double Startangle = 0;
 
 //This means the pins, not entire ports which the cables connect to
 const int InductionPin = 27; //Induction sensor pin to check
@@ -41,14 +42,19 @@ const double two_minutes_in_seconds = 120.0;
 // Record the start time
 int8_t programState = 0;  //0 is moving around, no weight detected, 1 is wall is detected, 2 is weight detected, 3 is returning back home
 
+//For going home
+int FoundWall = 0; //0 not found, 1 right wall found, 2 left wall found
+int FoundHome = 0; //if found home
 
 //Setup of LEDs
-
 const int LED1 = 4;  //Green on top set
 const int LED2 = 3;  //Yellow
 const int LED3 = 2;  //Red
 const int LED4 = 5;  //Green on bottom set
 
+//Positioning Variable Setups
+int StraightTotalTravelxperp = 0;
+int StraightTotalTravelypara = 0;
 
 //TOF Setup
 const byte SX1509_ADDRESS = 0x3F;
@@ -497,13 +503,13 @@ bool ColorCompareHome() {
         if (colorlist[3] == blue_Start) {
           bool ColorCompareHome = true;
         } else {
-          bool ColorCompareHome = true;
+          bool ColorCompareHome = false;
         }
       } else {
-        bool ColorCompareHome = true;
+        bool ColorCompareHome = false;
       }
     } else {
-      bool ColorCompareHome = true;
+      bool ColorCompareHome = false;
     }
   } else {
     bool ColorCompareHome = false;
@@ -566,11 +572,11 @@ void loop() {
     AngaccZList[element + 1] = AngaccZList[element];
   }
   AngaccZList[0] = ori[2]; //Getting data
-  AverageAngaccZ = 0;
+  AverageAngZ = 0;
   for (uint16_t averagingelement = 0; averagingelement<=49; averagingelement++) {  //Averaging the list of detect Z orientations
-    AverageAngaccZ += AngaccZList[averagingelement];
+    AverageAngZ += AngaccZList[averagingelement];
   }
-  AverageAngaccZ = AverageAngaccZ / 50;
+  AverageAngZ = AverageAngZ / 50;
   Serial.println("List");
   Serial.println(double(acc[0]));
   Serial.println(double(acc[1]));
@@ -581,7 +587,7 @@ void loop() {
   Serial.println(double(ori[2]));
   Serial.println(AverageAccelerationX); 
   Serial.println(AverageAccelerationY); 
-  Serial.println(AverageAngaccZ); 
+  Serial.println(AverageAngZ); 
   Serial.println(Yacclist[0]);
   Serial.println(AngaccZList[0]);
   Serial.println(Xacclist[49]);
@@ -600,9 +606,9 @@ void loop() {
   CurrentposY += (int(AverageAccelerationY) * pow(Timedif, 2));  //y
   Serial.print("Y: ");
   Serial.print(CurrentposY);
-  CurrentOrienZ = int(AverageAngaccZ);  //orientation in Z
+  CurrentOrienZ = int(AverageAngZ);  //orientation in Z
   Serial.print("  OrienZ: ");
-  Serial.print(AverageAngaccZ);
+  Serial.print(AverageAngZ);
   Serial.print("\n");
 
   //Encoder Part, will rely on the IMU in turns      
@@ -613,15 +619,16 @@ void loop() {
     lastReportedPos2 = encoderPos2;
   }
 
-  
-  if (encoderPos1-encoderPos2 > 10 || encoderPos1-encoderPos2 < 10) {
+  Serial.println("Encoder Data: ");
+  Serial.println(lastReportedPos2);
+  Serial.println(lastReportedPos1);
+  if (((lastReportedPos1-lastReportedPos2) > 10) || ((lastReportedPos2-lastReportedPos1) > 10)) {
     //Set IMU Positions to 0, and mTravels to 0
     Serial.print("IMU used in turns for angles");
     //IMU gets 
-    double mTravelEncoderLeft = 0;
-    double mTravelEncoderRight = 0;
-    //StraightTotalTravelxpara = IMU with trig
-    //StraightTotalTravelyperp = 
+    
+    StraightTotalTravelxpara += 0; //can use different trig or import from IMU
+    StraightTotalTravelyperp += 0;
   } else {
     Serial.print("Index:");
     Serial.print(encoderPos1, DEC); //These are in counts which are Pulses Per Revolution*4
@@ -630,11 +637,18 @@ void loop() {
     Serial.print(encoderPos2, DEC);
     double mTravelEncoderRight = (encoderPos2/4)*(0.421/663);
     Serial.println();
-    int StraightTotalTravelxperp = (mTravelEncoderLeft+mTravelEncoderRight)/2*sin(double(CurrentOrienZ)); //Encoder with 
-    int StraightTotalTravelypara = (mTravelEncoderLeft+mTravelEncoderRight)/2*cos(double(CurrentOrienZ));
+    StraightTotalTravelxperp += (mTravelEncoderLeft+mTravelEncoderRight)/2*sin(double(CurrentOrienZ)); //Should accumulate every iteration
+    StraightTotalTravelypara += (mTravelEncoderLeft+mTravelEncoderRight)/2*cos(double(CurrentOrienZ));
   }
-  
-  
+  double mTravelEncoderLeft = 0;
+  double mTravelEncoderRight = 0;
+  Serial.println("Overall positions");
+  Serial.println(StraightTotalTravelxperp);
+  Serial.println(StraightTotalTravelypara);
+  lastReportedPos1 = 0;
+  lastReportedPos2 = 0;
+  encoderPos1 = 0;
+  encoderPos2 = 0;
   
 
   //Color sensor detection
@@ -651,14 +665,10 @@ void loop() {
 
   if (elapsed_time==0) {
     colorStart();
+    Starting_angle = AverageAngZ;
   }
 
-  if (elapsed_time>100) {
-    bool home = ColorCompareHome();
-    if (home == 1){
-      Serial.println("Home");
-    }
-  }
+  
   
   //Electromagnet status
   Serial.print("ElectroMagnet Status: ");
@@ -668,7 +678,14 @@ void loop() {
   Serial.print("     ");
 
   //State machine
-  if (((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50) || (InductionDetected == 1)) && (elapsed_time <= 100)) { //Object like weight is found
+
+  if (elapsed_time>100) {
+    programState == 3;
+    bool home = ColorCompareHome();
+    if (home == 1){
+      Serial.println("Home");
+    }
+  } else if (((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50) || (InductionDetected == 1)) && (elapsed_time <= 100)) { //Object like weight is found
     programState = 2;
   } else if ((TopLeft < 20 || TopRight < 20 || TopMiddle < 20) && (elapsed_time <= 100)) { //state to turn
     programState = 1;
@@ -894,6 +911,51 @@ void loop() {
     } else { //If it looses the weight on the sensors
       programState = 0;
     } 
+  } else if (programState == 4) {
+    Serial.println("Going Home");
+    if ((ColorCompareHome() == true) || (FoundHome == 1)) {
+      FoundHome == 1;
+      stop();
+    }
+    if (FoundWall == 0 && FoundHome == 0) {
+      if (TopRight>20 && Topleft>20) {
+        Serial.print("Moving Forward Home");
+        int homeangle = atan(StraightTotalTravelxperp/StraightTotalTravelypara); //Can use this as an initial guess of a home angle
+        if (AverageAngZ > abs(homeangle-180)) {
+          full_turn_left(timedelay);
+        } else if (AverageAngZ < homeangle) {
+          full_turn_right(timedelay);
+        } else {
+          full_forward(timedelay); //can go full forward
+        }
+      }
+      if (TopRight < 20 && TopMiddle<50) {
+        full_turn_left(timedelay);
+      } else if (TopLeft < 20 && TopMiddle<50) {
+        full_turn_right(timedelay);
+      }
+      if (TopRight < 30 && TopMiddle>50){
+        FoundWall = 1; //If a right wall is found
+      }
+      if (TopLeft < 30 && TopMiddle>50){
+        FoundWall = 2; //If a left wall is found
+      }
+    } else if (FoundWall == 1 && FoundHome == 0) {
+      full_forward(timedelay);
+      if (FoundWall = 1) {
+        if (TopRight > 30){
+          full_turn_right(timedelay);
+        } else if (TopRight<5) {
+          full_turn_left(timedelay);
+        }
+      } else {
+        if (TopLeft > 30){
+          full_turn_left(timedelay);
+        } else if (TopLeft<5) {
+          full_turn_right(timedelay);
+        }
+      }
+    }
   }
   Serial.println(); //Next line
 }
