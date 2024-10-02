@@ -213,6 +213,7 @@ void UpdateWeightPositionState(uint32_t MiddleRight, uint32_t BottomRight, uint3
 
 void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_t MiddleLeft, uint32_t MiddleRight, uint32_t BottomLeft, uint32_t BottomRight, bool BackInduction) {
 
+
     switch (currentState) {
       case STARTING:
         // Take start readings, then set readyToDrive
@@ -229,6 +230,9 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
         break;
 
       case DRIVING:
+        if(TopMiddle > 400) {
+          full_reverse(10*motortime);
+        }
         switch (weightState) {
           case WEIGHT_NOT_DETECTED:
             switch (wallState) {
