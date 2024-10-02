@@ -324,12 +324,20 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
             //     break;
             // }
             // break;
+            if(TopMiddle < 20) {
+              if(TopLeft > TopRight){
+                full_turn_left(5*motortime);
+              } else {
+                full_turn_right(5*motortime);
+              }
+              weightState = WEIGHT_NOT_DETECTED;
+            }
             if (BottomLeft > (BottomRight + 5)) {
               forward_right(motortime);
             } else if (BottomRight > (BottomLeft + 5)) {
               forward_left(motortime);
             } else {
-              half_forward(10*motortime);
+              half_forward(motortime);
             } 
             break;
           case WEIGHT_CONFIRMED:

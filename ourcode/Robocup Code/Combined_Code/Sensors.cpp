@@ -3,6 +3,8 @@
 
 #define BUFFER_SIZE 5
 
+
+//TOF
 const int numReadings = 7;
 
 circBuf_t TOFbuffers[numReadings];
@@ -15,9 +17,9 @@ const int sensorErrorValue = 819;
 const int maxSensorValue = 115;
 
 // ELECTROMAGNET
-const int FrontElectromagnetPin = 20;
-const int MiddleElectromagnetPin = 24;
-const int BackElectromagnetPin = 14;
+extern int FrontElectromagnetPin;
+extern int MiddleElectromagnetPin;
+extern int BackElectromagnetPin;
 const int numElectroMagnets = 3;
 
 // INDUCTION
@@ -43,11 +45,21 @@ VL53L1X sensorsL1[sensorCountL1];
 VL53L0X sensorsL0[sensorCountL0];
 
 
+//Color Sensor setup
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
+const int ColorSensorPin = 41;
+uint16_t colorlist[4];
+uint16_t red_Start;
+uint16_t green_Start;
+uint16_t blue_Start;
+uint16_t clear_Start;
+
 uint16_t TOFreadings[numReadings];
 bool electromagnetStates[numElectroMagnets];
 bool inductionSensorStates[numInductiveSensors];
 
 void setupSensors() {
+    Serial.begin(9600);
     Serial.print("Setup");
 
     // ElectroMagnet
@@ -74,6 +86,7 @@ void setupSensors() {
     Wire.setClock(400000);  // use 400 kHz I2C
     Wire1.begin();
     Wire1.setClock(400000);  // use 400 kHz I2C
+    Wire2.begin();
 
     // Disable/reset all sensors by driving their XSHUT pins low.
     for (uint8_t i = 0; i < sensorCountL1; i++) {
@@ -112,6 +125,89 @@ void setupSensors() {
     }
 
     Serial.println("Configured TOFs");
+
+    // Initialize color sensor
+    if (tcs.begin(ColorSensorPin, &Wire1)) {
+        Serial.println("Found sensor");
+    } else {
+        Serial.println("No TCS34725 found ... check your connections");
+        while (1); // halt!
+    }
+
+    // Take initial color reading and store as starting color
+    colorSensorDetect(colorlist);  // Read the initial color
+    colorStart();  // Save the starting color values
+
+}
+
+void colorSensorDetect(uint16_t* returnlist) {
+  uint16_t clear, red, green, blue;
+
+  tcs.setInterrupt(false);      // turn on LED
+  delay(60);  // takes 50ms to read 
+  tcs.getRawData(&red, &green, &blue, &clear);
+  tcs.setInterrupt(true);  // turn off LED
+
+  uint32_t sum = clear;
+  float r, g, b;
+  r = red; r /= sum;
+  g = green; g /= sum;
+  b = blue; b /= sum;
+  r *= 256; g *= 256; b *= 256;
+  //Serial.print("\t\t"); //t is space
+  Serial.print((int)r); Serial.print("\t"); Serial.print((int)g); Serial.print("\t"); Serial.print((int)b); //Need to move these to modularized code
+  Serial.println();
+  returnlist[0] = clear;
+  returnlist[1] = red;
+  returnlist[2] = green;
+  returnlist[3] = blue;
+}
+
+void colorStart() {
+  clear_Start = colorlist[0];
+  red_Start = colorlist[1];
+  green_Start = colorlist[2];
+  blue_Start = colorlist[3]; 
+}
+
+bool ColorCompareHome() {
+  // Define separate tolerances for clear and colors
+  const int clearTolerance = 30;  // Higher tolerance for clear channel
+  const int colorTolerance = 15;   // Tighter tolerance for RGB channels
+
+  // Array of starting colors and current colors for comparison
+  uint16_t startColors[] = {clear_Start, red_Start, green_Start, blue_Start};
+  const char* colorNames[] = {"Clear", "Red", "Green", "Blue"};
+  int tolerances[] = {clearTolerance, colorTolerance, colorTolerance, colorTolerance};
+
+  // Loop through each color and compare with the starting color
+  for (int i = 0; i < 4; i++) {
+    int difference = abs(colorlist[i] - startColors[i]);
+    if (difference > tolerances[i]) {
+      Serial.print(colorNames[i]);
+      Serial.print(" value is out of tolerance by ");
+      Serial.println(difference);  // Print the difference for debugging
+      return false;  // One or more colors are out of tolerance
+    }
+  }
+
+  // All colors are within tolerance
+  Serial.println("All colors are within tolerance.");
+  return true;
+}
+
+
+
+void CheckAndPrintColorMatch() {
+    // Take a new color reading
+    colorSensorDetect(colorlist);
+
+    // Compare with the starting color and print the result
+    if (ColorCompareHome()) {
+        Serial.println("Color matches the starting color.");
+    } else {
+        Serial.println("Color does NOT match the starting color.");
+    }
 }
 
 uint16_t* GetTOF() {
@@ -194,6 +290,7 @@ void PrintInformation() {
     UpdateTOFReadings(); // Update TOF readings
     GetElectroMagnet(); // Update electromagnet states
     GetInduction(); // Update induction sensor states
+    CheckAndPrintColorMatch();
 
     // Get average TOF readings
     uint16_t* averageReadings = GetAverageTOF();
