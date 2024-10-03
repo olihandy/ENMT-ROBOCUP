@@ -131,11 +131,11 @@ void MovingAverageFilter(void) {
 // Main function to process IMU data
 void IMU(void) {
   Serial.println("-----------------------------------------------------------------------");
-  uint8_t system, gyro, accel, mag = 0;
-  bno.getCalibration(&system, &gyro, &accel, &mag);
+
   IMUGetPos();                  // Retrieve position and orientation data
   // MovingAverageFilter();        // Apply moving average filter
-
+  
+  PreviousTime = millis();      // Update previous time
   double timeDifference = (millis() - PreviousTime) / 1000.0; // Calculate time difference in seconds  
 
   // Update current positions using average acceleration and time
@@ -152,7 +152,6 @@ void IMU(void) {
   Serial.println(ori);
   
   Serial.println("-----------------------------------------------------------------------");
-  PreviousTime = millis();      // Update previous time
 
 
 }
