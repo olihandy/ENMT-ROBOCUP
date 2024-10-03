@@ -1,10 +1,21 @@
 #include "IMU.h"
+#include <Wire.h>  
+#include <VL53L1X.h>
+#include <VL53L0X.h>
+#include <SparkFunSX1509.h>
+#include <stdio.h>  
+#include <time.h>
+#include <Servo.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <utility/imumaths.h>
+#include <arduino.h>
 
 // Global variables for IMU data
 float CurrentPosX = 0;                 // Current position in X-axis
 float CurrentPosY = 0;                 // Current position in Y-axis
 int PreviousMove = 0;                // Previous movement direction (0 = left, 1 = right)
-int PreviousTurnTime = 0;            // Previous turn time
+float PreviousTurnTime = 0;            // Previous turn time
 static float XAccelerationList[50] = { 0 };   // List for X accelerations
 static float YAccelerationList[50] = { 0 };   // List for Y accelerations
 float AverageAccelerationX = 0;        // Average acceleration in X-axis
@@ -15,15 +26,13 @@ float AverageAngleX = 0;                // Average angular Z
 static float OrientationXList[50] = { 0 }; // List for angular accelerations in Z-axis
 double StartAngle = 0;                // Starting angle
 uint16_t BNO055_SAMPLERATE_DELAY_MS = 100; // Sample rate delay
-
 sensors_event_t orientationData, linearAccelData;
-float ori[3];
-float acc[3];
+
+float acc[2];
+float ori;
 
 // Create an instance of the BNO055 sensor
 Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire); // Initialize sensor with I2C address 0x28
-
-
 
 
 void setup_IMU(void) {
@@ -40,38 +49,28 @@ void setup_IMU(void) {
 }
 
 
-
-
-
 void printEvent(sensors_event_t* event) { //problems getting right event
-  double x = -1000000, y = -1000000 , z = -1000000; //dumb values, easy to spot problem
+  double x_ori = -1000000, x_acc = -1000000, y_acc = -1000000;
   if (event->type == SENSOR_TYPE_ORIENTATION) {
     Serial.print("Orient:");
-    x = event->orientation.x;
-    y = event->orientation.y;
-    z = event->orientation.z;
+    x_ori = event->orientation.x;
 
-    ori[0] = x;
-    ori[1] = y;
-    ori[2] = z;
+    ori = x_ori;
 
   } else if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
     Serial.print("Linear:");
-    x = event->acceleration.x;
-    y = event->acceleration.y;
-    z = event->acceleration.z;
-    acc[0] = x;
-    acc[1] = y;
-    acc[2] = z;
+    x_acc = event->acceleration.x;
+    y_acc = event->acceleration.y;
+
+    acc[0] = x_acc;
+    acc[1] = y_acc;
+
     Serial.print("\tAcceleration= ");
-    Serial.print("\t");Serial.print(acc[0]);Serial.print("\t");Serial.print(acc[1]);Serial.print("\t");Serial.print(acc[2]);
+    Serial.print("\t");Serial.print(acc[0]);Serial.print("\t");Serial.print(acc[1]);Serial.print("\t");
   } else {
     Serial.print("Unk:");
   }
 }
-
-
-
 
 
 void IMUGetPos(void) {
@@ -88,89 +87,73 @@ void IMUGetPos(void) {
 }
 
 
-
-
-
-
 void MovingAverageFilter(void) {
-    Serial.println("");
-    Serial.print("\t");Serial.print(acc[0]);Serial.print("\t");Serial.print(acc[1]);Serial.print("\t");Serial.print(acc[2]);
+  int element1 = 0;
+  int element2 = 0;
+  int element3 = 0;
 
-  // Shift X acceleration data
-  for (uint16_t i = 50; i > 0; i--) {
-    XAccelerationList[i] = XAccelerationList[i - 1];
+  int averagingelement1 = 0;
+  int averagingelement2 = 0;
+  int averagingelement3 = 0;
+
+
+ for (element1; element1 < 50; element1++){                 //shifting the window of detected accelerations for X
+    XAccelerationList[element1+1] = XAccelerationList[element1];
   }
-  XAccelerationList[0] = acc[0];  // Store new X acceleration
-  // Calculate average for X
+  XAccelerationList[0] = acc[0];  //Getting data from x accelerations
   AverageAccelerationX = 0;
-  for (uint16_t i = 0; i < 50; i++) {
-    AverageAccelerationX += XAccelerationList[i];
-
+  for (averagingelement1; averagingelement1 < 50; averagingelement1++) {  //Averaging the list of detect x accelerations
+    AverageAccelerationX += XAccelerationList[averagingelement1];
   }
-  AverageAccelerationX /= 50; // Average X acceleration
+  AverageAccelerationX /= 50; //50 is elements in moving average filter
 
-  // Serial.println("Ave x acc");
-  // Serial.println(AverageAccelerationX);
-  
-  
-  
-  // Shift Y acceleration data
-  for (uint16_t i = 50; i > 0; i--) {
-    YAccelerationList[i] = YAccelerationList[i - 1];
+  for (element2; element2 < 50; element2++) {  //shifting the window of detected accelerations for Y
+    YAccelerationList[element2 + 1] = YAccelerationList[element2];
   }
-  YAccelerationList[0] = acc[1]; // Store new Y acceleration
-  // Calculate average for Y
+  YAccelerationList[0] = acc[1]; //Getting data from y accelerations
   AverageAccelerationY = 0;
-  for (uint16_t i = 0; i < 50; i++) {
-    AverageAccelerationY += YAccelerationList[i];
+  for (averagingelement2; averagingelement2 < 50; averagingelement2++) {  //Averaging the list of detect y accelerations
+    AverageAccelerationY += YAccelerationList[averagingelement2];
   }
-  AverageAccelerationY /= 50; // Average Y acceleration
-  // Serial.println("Ave y acc");
-  // Serial.println(AverageAccelerationY);
+  AverageAccelerationY /= 50;
 
-
-
-  // Shift angular acceleration data
-  for (uint16_t i = 50; i > 0; i--) {
-    OrientationXList[i] = OrientationXList[i - 1];
+  for (element3; element3 < 50; element3++) {  //shifting the window of detected accelerations for Z orientations
+    OrientationXList[element3 + 1] = OrientationXList[element3];
   }
-  OrientationXList[0] = ori[0]; // Store new Z orientation
-  // Calculate average for Z orientation
+  OrientationXList[0] = ori; //Getting data
   AverageAngleX = 0;
-  for (uint16_t i = 0; i < 50; i++) {
-    AverageAngleX += OrientationXList[i];
+  for (averagingelement3; averagingelement3 < 50; averagingelement3++) {  //Averaging the list of detect Z orientations
+    AverageAngleX += OrientationXList[averagingelement3];
   }
-  AverageAngleX /= 50; // Average Z orientation
-
+  AverageAngleX /= 50;
 }
 
 // Main function to process IMU data
 void IMU(void) {
   Serial.println("-----------------------------------------------------------------------");
-  
+  uint8_t system, gyro, accel, mag = 0;
+  bno.getCalibration(&system, &gyro, &accel, &mag);
   IMUGetPos();                  // Retrieve position and orientation data
-  MovingAverageFilter();        // Apply moving average filter
+  // MovingAverageFilter();        // Apply moving average filter
 
-  double timeDifference = (millis() - PreviousTime) / 1000.0; // Calculate time difference in seconds
-  PreviousTime = millis();      // Update previous time
+  double timeDifference = (millis() - PreviousTime) / 1000.0; // Calculate time difference in seconds  
 
   // Update current positions using average acceleration and time
   Serial.println("");
-  CurrentPosX += static_cast<int>(AverageAccelerationX * pow(timeDifference, 2)); // Update X position
-  Serial.println(AverageAccelerationX);
+  CurrentPosX += (acc[0]  * timeDifference * timeDifference); // Update X position
   Serial.print("X Position: ");
   Serial.println(CurrentPosX);
 
-  CurrentPosY += static_cast<int>(AverageAccelerationY * pow(timeDifference, 2)); // Update Y position
-  Serial.println(AverageAccelerationY);
+  CurrentPosY += (acc[1] * timeDifference * timeDifference); // Update Y position
   Serial.print("Y Position: ");
   Serial.println(CurrentPosY);
 
-  CurrentOrientationX = static_cast<int>(AverageAngleX); // Update Z orientation
-  Serial.println(CurrentOrientationX);
   Serial.print("Orientation X: ");
-  Serial.println(AverageAngleX);
+  Serial.println(ori);
+  
   Serial.println("-----------------------------------------------------------------------");
+  PreviousTime = millis();      // Update previous time
+
 
 }
 
