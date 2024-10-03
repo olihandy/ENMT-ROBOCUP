@@ -8,6 +8,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
+#include <arduino.h>
 
 const int ElectroMagnet1Pin = 25; //Electromagnet pins, changed from A as the front and rear never turn on
 const int ElectroMagnet2Pin = 24;
@@ -496,15 +497,11 @@ void colorStart() {
   blue_Start = colorlist[3]; 
 }
 
-bool ColorCompareHome() {
-  if (colorlist[0] == clear_Start) {
-    if (colorlist[1] == red_Start) {
-      if (colorlist[2] == green_Start) {
-        if (colorlist[3] == blue_Start) {
-          bool ColorCompareHome = true;
-        } else {
-          bool ColorCompareHome = false;
-        }
+bool ColorCompareHome() { //Clear is unfiltered photodiode
+  if (((colorlist[1]-red_Start)<10) && ((colorlist[1]-red_Start)>(-10))) {
+    if (((colorlist[2]-green_Start)<10) && ((colorlist[2]-green_Start)>(-10))) {
+      if (((colorlist[3]-blue_Start)<10) && ((colorlist[3]-blue_Start)>(-10))) { //Multiplied by colorlist[0]/clear_start?
+        bool ColorCompareHome = true;
       } else {
         bool ColorCompareHome = false;
       }
@@ -627,8 +624,8 @@ void loop() {
     Serial.print("IMU used in turns for angles");
     //IMU gets 
     
-    StraightTotalTravelxpara += 0; //can use different trig or import from IMU
-    StraightTotalTravelyperp += 0;
+    StraightTotalTravelxperp += 0; //can use different trig or import from IMU
+    StraightTotalTravelypara += 0;
   } else {
     Serial.print("Index:");
     Serial.print(encoderPos1, DEC); //These are in counts which are Pulses Per Revolution*4
@@ -665,7 +662,7 @@ void loop() {
 
   if (elapsed_time==0) {
     colorStart();
-    Starting_angle = AverageAngZ;
+    Startangle = AverageAngZ;
   }
 
   
@@ -681,10 +678,6 @@ void loop() {
 
   if (elapsed_time>100) {
     programState == 3;
-    bool home = ColorCompareHome();
-    if (home == 1){
-      Serial.println("Home");
-    }
   } else if (((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50) || (InductionDetected == 1)) && (elapsed_time <= 100)) { //Object like weight is found
     programState = 2;
   } else if ((TopLeft < 20 || TopRight < 20 || TopMiddle < 20) && (elapsed_time <= 100)) { //state to turn
@@ -915,18 +908,45 @@ void loop() {
     Serial.println("Going Home");
     if ((ColorCompareHome() == true) || (FoundHome == 1)) {
       FoundHome == 1;
-      stop();
+      stop(timedelay);
     }
     if (FoundWall == 0 && FoundHome == 0) {
-      if (TopRight>20 && Topleft>20) {
+      if (TopRight>20 && TopLeft>20) {
         Serial.print("Moving Forward Home");
-        int homeangle = atan(StraightTotalTravelxperp/StraightTotalTravelypara); //Can use this as an initial guess of a home angle
-        if (AverageAngZ > abs(homeangle-180)) {
-          full_turn_left(timedelay);
-        } else if (AverageAngZ < homeangle) {
-          full_turn_right(timedelay);
+
+        int homeangle_to_robot = int(atan2(StraightTotalTravelypara, StraightTotalTravelxperp) * 180 / PI); // Calculate angle to home
+        homeangle_to_robot += Startangle; // Adjust by initial angle (Startangle)
+
+        Serial.println(Startangle);
+        Serial.println(homeangle_to_robot);
+
+        // Adjust the home angle to point the robot toward home
+        int heading_home_angle = homeangle_to_robot - 180;
+
+        // Wrap the heading_home_angle to stay within 0-360 degrees
+        if (heading_home_angle < 0) {
+          heading_home_angle += 360;
+        } else if (heading_home_angle >= 360) {
+          heading_home_angle -= 360;
+        }
+
+        // Determine if we need to turn left, right, or move forward
+        int angle_diff = AverageAngZ - heading_home_angle; // Calculate difference between current angle and target home heading
+
+        // Wrap angle_diff to handle circular nature of angles
+        if (angle_diff > 180) {
+          angle_diff -= 360; // Ensure it's within -180 to 180 range
+        } else if (angle_diff < -180) {
+          angle_diff += 360;
+        }
+
+        // Decision making: Turn left, right, or move forward based on the angle difference
+        if (angle_diff > 10) {
+          full_turn_left(timedelay); // If too far right, turn left
+        } else if (angle_diff < -10) {
+          full_turn_right(timedelay); // If too far left, turn right
         } else {
-          full_forward(timedelay); //can go full forward
+          full_forward(timedelay); // If within the desired range, move forward
         }
       }
       if (TopRight < 20 && TopMiddle<50) {
