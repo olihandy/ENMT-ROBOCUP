@@ -190,7 +190,7 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
                 break;
              case NO_WALL:
              default:
-              if(TopMiddle > 50) {
+              if(TopMiddle < 150) {
                if (TopLeft > TopRight + 20) {
                   forward_left(motortime);
                 } else {
@@ -198,6 +198,7 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
                 }
               } else {
                 full_turn_right(motortime);
+                full_forward(motortime);
               }
               break;
                 }
@@ -210,15 +211,21 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
               } else {
                 full_turn_right(5*motortime);
               }
-              weightState = WEIGHT_NOT_DETECTED;
-            }
-            if (BottomLeft > (BottomRight + 5)) {
-              forward_right(motortime);
-            } else if (BottomRight > (BottomLeft + 5)) {
-              forward_left(motortime);
+            } else if(TopLeft < 10) {
+              full_reverse(3*motortime);
+              forward_left(3*motortime);
+            } else if(TopRight < 10) {
+              full_reverse(3*motortime);
+              forward_right(3*motortime);
             } else {
-              half_forward(motortime);
-            } 
+              if (BottomLeft > (BottomRight + 5)) {
+                forward_right(motortime);
+              } else if (BottomRight > (BottomLeft + 5)) {
+                forward_left(motortime);
+              } else {
+                half_forward(motortime);
+              } 
+            }
             break;
           case WEIGHT_CONFIRMED:
             if((millis() - timeWeightDetected) > timeoutDuration) {
