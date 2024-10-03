@@ -16,13 +16,14 @@ int five_seconds = 5000;
 int NOCHANGETHRESHOLD = 5;
 int timeWeightDetected;
 
+int stepper_motor_fast = 20;
+int stepper_motor_slow = 50;
+
 int motortime = 100;
 
 WallDetectionState wallState = NO_WALL;
 RobotState currentState = STARTING;
 WeightDetectionState weightState = WEIGHT_NOT_DETECTED;
-WeightPositionState WeightPosition = CLEAR;
-
 // Add these global variables to store previous sensor states
 uint16_t prevTOFReadings[7];
 bool prevInductionSensorStates[2];
@@ -120,23 +121,6 @@ void PrintStates(void) {
             Serial.println("WEIGHT_CONFIRMED");
             break;
     }
-
-    Serial.print("WeightPosition: ");
-    switch (WeightPosition) {
-        case CLEAR:
-            Serial.println("CLEAR");
-            break;
-        case AGAINST_WALL:
-            Serial.println("AGAINST_WALL");
-            break;
-        case LEFT_CLOSER_WALL:
-            Serial.println("LEFT_CLOSER_WALL");
-            break;
-        case RIGHT_CLOSER_WALL:
-            Serial.println("RIGHT_CLOSER_WALL");
-            break;                   
-    }    
-
     Serial.println("----------------------");
 }
 
@@ -176,38 +160,6 @@ void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t Midd
         } else {
             weightState = WEIGHT_NOT_DETECTED;
         }
-    }
-}
-
-void UpdateWeightPositionState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight) {
-
-    // If the robot is in the CLEAR state, do not update the state until a weight is collected
-    if (WeightPosition == CLEAR && weightState != WEIGHT_CONFIRMED) {
-        return;  // Remain in CLEAR state until a weight is detected and confirmed
-    }
-
-    // First, check TopMiddle
-    if (TopMiddle < LengthOfRobot) {
-        // Check which side is closer by comparing TopLeft and TopRight
-        if (TopLeft > TopRight) {
-            WeightPosition = LEFT_CLOSER_WALL;
-        } else if (TopRight > TopLeft) {
-            WeightPosition = RIGHT_CLOSER_WALL;
-        } else {
-            WeightPosition = AGAINST_WALL;  // If they are about the same, assume it's against the wall
-        }
-    }
-    // If TopMiddle is not close enough, check side proximity
-    else if ((MiddleRight < LengthOfRobot) && (MiddleLeft < LengthOfRobot)) {
-        if (MiddleLeft < MiddleRight + 5) {
-            WeightPosition = LEFT_CLOSER_WALL;
-        } else if (MiddleRight < MiddleLeft + 5) {
-            WeightPosition = RIGHT_CLOSER_WALL;
-        } else {
-            WeightPosition = AGAINST_WALL;  // Both sides are almost equal, consider it against the wall
-        }
-    } else {
-        WeightPosition = CLEAR;  // If neither side is close, it's clear
     }
 }
 
@@ -268,62 +220,6 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
               break;
 
           case WEIGHT_DETECTED:
-            // UpdateWeightPositionState(MiddleRight, BottomRight, MiddleLeft, BottomLeft, TopMiddle, TopLeft, TopRight);
-            // switch (WeightPosition) {
-            //   case CLEAR:
-            //     if(BottomLeft > 20 && BottomRight > 20) {
-            //       if (BottomLeft > (BottomRight + 5)) {
-            //         forward_right(motortime);
-            //       } else if (BottomRight > (BottomLeft + 5)) {
-            //         forward_left(motortime);
-            //       } else {
-            //         half_forward(10*motortime);
-            //       }                  
-            //     } else {
-            //       if (BottomLeft > (BottomRight + 5)) {
-            //         full_turn_right(motortime);
-            //       } else if (BottomRight > (BottomLeft + 5)) {
-            //           full_turn_right(motortime);
-            //       } else {
-            //           half_forward(10*motortime);
-            //       }
-            //     }
-            //     break;
-            //   case AGAINST_WALL:
-            //     full_reverse(5*motortime);
-            //     full_turn_left(5*motortime);
-            //     forward_right(10*motortime);
-            //     if(TopLeft < 20) {
-            //       full_forward(motortime);
-            //     } else {
-            //       forward_left(motortime);
-            //     }
-            //     break;
-            //   case LEFT_CLOSER_WALL:
-            //     reverse_left(5*motortime);
-            //     full_turn_left(5*motortime);
-            //     half_forward(motortime);
-            //     if(TopLeft < 20) {
-            //       full_forward(motortime);
-            //     } else {
-            //       forward_left(motortime);
-            //     }
-            //     break;
-            //   case RIGHT_CLOSER_WALL:
-            //     reverse_right(5*motortime);
-            //     full_turn_right(5*motortime);
-            //     half_forward(motortime);
-            //     if(TopRight < 20) {
-            //       full_forward(motortime);
-            //     } else {
-            //       forward_left(motortime);
-            //     }
-            //     break;
-            //   default:
-            //     full_forward(motortime);
-            //     break;
-            // }
-            // break;
             if(TopMiddle < 20) {
               if(TopLeft > TopRight){
                 full_turn_left(5*motortime);
@@ -349,15 +245,15 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
               half_forward(motortime);
                 if (BackInduction) {
                 stop(motortime);
-                go_down();
+                go_down(stepper_motor_fast);
                 currentState = COLLECTING_WEIGHT;
                 }
             }else if(NumWeightsCollected > 0) {
               stop(motortime);
-              big_step_down();
+              big_step_down(stepper_motor_slow);
               half_forward(10 * motortime);
               stop(motortime);
-              little_step_down();
+              little_step_down(stepper_motor_slow);
               currentState = COLLECTING_WEIGHT;
             }
             break;
@@ -370,25 +266,24 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
             Serial.println("Electromagnet 0 activated");
             stop(motortime);
             NumWeightsCollected++;
-            go_up();
+            go_up(stepper_motor_fast);
             weightState = WEIGHT_NOT_DETECTED;
             currentState = DRIVING;
 
         } else if (NumWeightsCollected == 1) {
             turn_on_electromagnet(1);
             stop(motortime);
-
             Serial.println("Electromagnet 1 activated");
-           
             NumWeightsCollected++;
-            go_up();
+            go_up(stepper_motor_slow);
             weightState = WEIGHT_NOT_DETECTED;            
             currentState = DRIVING;
+
         } else if (NumWeightsCollected == 2) {
             turn_on_electromagnet(2);
             Serial.println("Electromagnet 2 activated");
             stop(motortime);           
-            go_up();
+            go_up(stepper_motor_slow);
             currentState = DRIVING;
             weightState = WEIGHT_NOT_DETECTED;
             NumWeightsCollected++;
@@ -408,12 +303,12 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
         homeReached = 1;
         if (homeReached) {
           stop(motortime);
-          go_down();
+          go_down(stepper_motor_slow);
           turn_off_electromagnet(0);
           turn_off_electromagnet(1);
           turn_off_electromagnet(2);
           stop(motortime);
-          go_up();
+          go_up(stepper_motor_fast);
           NumWeightsCollected = 0;
           currentState = FINISHED;
         }
@@ -421,6 +316,9 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
 
       case FINISHED:
         stop(motortime);
+        delay(100);
+        homeReached = 0;
+        currentState = STARTING;
     }
   }
 
