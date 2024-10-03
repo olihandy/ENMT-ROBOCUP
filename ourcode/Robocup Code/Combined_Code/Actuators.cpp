@@ -8,6 +8,7 @@ int full_forward_speed = 1100;
 int half_reverse_speed = 1750;
 int half_forward_speed = 1250;
 int timedelay = 100;
+float kp = 0.5;  // Proportional constant for speed control (tune this)
 
 int FrontElectromagnetPin = 14;
 int MiddleElectromagnetPin = 20;
@@ -103,6 +104,42 @@ void forward_left(int timedelay) {
   myservoA.writeMicroseconds(full_forward_speed);
   myservoB.writeMicroseconds(half_forward_speed);
 }
+
+
+void proportional_forward(int targetDistance, int sensorReading) {
+  int error = targetDistance - sensorReading;
+  int adjustedSpeed = constrain(full_forward_speed + kp * error, 1100, 1950);  // Adjust speed based on error, within limits
+
+  myservoA.writeMicroseconds(adjustedSpeed);
+  myservoB.writeMicroseconds(adjustedSpeed);
+}
+
+void proportional_backward(int targetDistance, int sensorReading) {
+  int error = targetDistance - sensorReading;
+  int adjustedSpeed = constrain(full_reverse_speed - kp * error, 1100, 1950);  // Adjust speed for reverse based on error
+
+  myservoA.writeMicroseconds(adjustedSpeed);
+  myservoB.writeMicroseconds(adjustedSpeed);
+}
+
+void proportional_forward_left(int targetDistance, int sensorReading) {
+  int error = targetDistance - sensorReading;
+  int adjustedSpeedA = constrain(half_forward_speed + kp * error, 1100, 1950);  // Adjust speed for left motor
+  int adjustedSpeedB = constrain(full_forward_speed + kp * error, 1100, 1950);  // Adjust speed for right motor
+
+  myservoA.writeMicroseconds(adjustedSpeedA);
+  myservoB.writeMicroseconds(adjustedSpeedB);
+}
+
+void proportional_forward_right(int targetDistance, int sensorReading) {
+  int error = targetDistance - sensorReading;
+  int adjustedSpeedA = constrain(full_forward_speed + kp * error, 1100, 1950);  // Adjust speed for left motor
+  int adjustedSpeedB = constrain(half_forward_speed + kp * error, 1100, 1950);  // Adjust speed for right motor
+
+  myservoA.writeMicroseconds(adjustedSpeedA);
+  myservoB.writeMicroseconds(adjustedSpeedB);
+}
+
 
 //--------------------------------------------------------------------------------------------------------//
 //----------------------------------------- Stepper Motors ------------------------------------------------//

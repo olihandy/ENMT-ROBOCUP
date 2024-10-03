@@ -42,6 +42,12 @@ void forward_right(int timedelay);
 void full_turn_left(int timedelay);
 void forward_left(int timedelay);
 
+void proportional_forward(int targetDistance, int sensorReading);
+void proportional_backward(int targetDistance, int sensorReading);
+void proportional_forward_left(int targetDistance, int sensorReading);
+void proportional_forward_right(int targetDistance, int sensorReading);
+
+
 // Stepper motor functions now include speed parameter
 void go_down(int speed);            // Descend using speed instead of delay
 void little_step_down(int speed);   // Small downward steps with adjustable speed
