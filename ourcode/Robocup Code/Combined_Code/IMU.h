@@ -14,6 +14,6 @@ void IMUGetOrientation(void);
 void printEvent(sensors_event_t* event);
 void MovingAverageFilter(void);
 void IMU(void);
-void IMUprint(void);
+void IMU_print(void);
 
 #endif // IMU_H

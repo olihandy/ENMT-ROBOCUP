@@ -42,7 +42,6 @@
   void printEvent(sensors_event_t* event) { //problems getting right event
     double x_ori = -1000000, z_ori = -1000000;
     if (event->type == SENSOR_TYPE_ORIENTATION) {
-      Serial.print("Orient:");
       x_ori = event->orientation.x;
       z_ori = event->orientation.y;
       ori[0] = x_ori;
@@ -64,22 +63,16 @@
 
   // Main function to process IMU data
   void IMU(void) {
-    Serial.println("-----------------------------------------------------------------------");
-
     IMUGetOrientation();                  // Retrieve position and orientation data
-
     PreviousTime = millis();      // Update previous time
     double timeDifference = ((millis() - PreviousTime) / 1000.0); // Calculate time difference in seconds  
-
     AverageAngleX = ori[0];
     AverageAngleZ = ori[2];
-    // Update current positions using average acceleration and time
+  }
+
+  void IMU_print(void) {
     Serial.print("Orientation X: ");
     Serial.println(AverageAngleX);
     Serial.print("Orientation Z: ");
     Serial.println(AverageAngleZ);
-    
-    Serial.println("-----------------------------------------------------------------------");
-
-
   }

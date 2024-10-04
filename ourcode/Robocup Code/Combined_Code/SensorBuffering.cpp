@@ -7,6 +7,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
+
 uint32_t * initCircBuf (circBuf_t *buffer, uint32_t size)
 {
 	buffer->windex = 0;
