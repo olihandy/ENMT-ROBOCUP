@@ -47,7 +47,6 @@
       z_ori = event->orientation.y;
       ori[0] = x_ori;
       ori[2] = z_ori;
-      Serial.println(x_ori); Serial.println(z_ori);
     } else {
       Serial.print("Unk:");
     }

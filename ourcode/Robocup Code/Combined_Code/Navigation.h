@@ -42,13 +42,13 @@ enum WeightDetectionState {
 // Declare the current weight detection state
 extern WeightDetectionState weightState;
 
-
 // Function prototypes
 extern void PrintStates(void);
-extern void UpdateWallState(uint32_t TopLeft, uint32_t TopMiddle, uint32_t TopRight);
-extern void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, bool FrontInduction);
+extern void UpdateWallState();
+extern void UpdateWeightState(void);
 extern void UpdateAll(void);
-extern void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_t MiddleLeft, uint32_t MiddleRight, uint32_t BottomLeft, uint32_t BottomRight, bool BackInduction);
-
+extern void Navigation(void);
+extern void CheckForSensorUpdates(void); // Added function for checking sensor updates
+extern void checkOrientation(void); // Added function for checking orientation
 
 #endif //NAVIGATION_H

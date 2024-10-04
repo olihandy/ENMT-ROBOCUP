@@ -22,6 +22,9 @@ extern int MiddleElectromagnetPin;
 extern int BackElectromagnetPin;
 const int numElectroMagnets = 3;
 
+//Go Button
+const int GoButtonPin = 23;
+
 // INDUCTION
 const int FrontInductionPin = 27; 
 const int BackInductionPin = 26;
@@ -61,6 +64,8 @@ bool inductionSensorStates[numInductiveSensors];
 void setupSensors() {
     Serial.begin(9600);
     Serial.print("Setup");
+
+    pinMode(GoButtonPin, INPUT);
 
     // ElectroMagnet
     pinMode(FrontElectromagnetPin, OUTPUT);
@@ -294,7 +299,6 @@ void PrintInformation() {
 
     // Get average TOF readings
     uint16_t* averageReadings = GetAverageTOF();
-
     Serial.print("Top  L ");
     Serial.print(averageReadings[1]);
     if (sensorsL1[0].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }

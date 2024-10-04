@@ -15,6 +15,8 @@ int LengthOfRobot = 35;
 int five_seconds = 5000;
 int NOCHANGETHRESHOLD = 5;
 int timeWeightDetected;
+unsigned long lastOrientationChangeTime = 0;
+float lastOrientation = 0;
 
 int stepper_motor_fast = 20;
 int stepper_motor_slow = 50;
@@ -31,27 +33,63 @@ bool prevInductionSensorStates[2];
 //----------------------------------- Sensor Update and State Printing -----------------------------------//
 //--------------------------------------------------------------------------------------------------------//
 
-bool CheckForSensorUpdates() {
+void CheckForSensorUpdates() {
   bool sensorChanged = false;
-
-  // Check for changes in TOF readings
+  
+  UpdateTOFReadings();
   for (int i = 0; i < numReadings; i++) {
     if (abs(TOFreadings[i] - prevTOFReadings[i]) > NOCHANGETHRESHOLD) {
-      sensorChanged = true;
+      sensorChanged = true; // Sensor value has changed significantly
       prevTOFReadings[i] = TOFreadings[i];
     }
   }
 
-  // Check for changes in induction sensor states
-  bool* inductionSensorState = GetInduction();
+  bool* inductionSensorState = GetInduction(); 
   for (int i = 0; i < numInductiveSensors; i++) {
     if (inductionSensorState[i] != prevInductionSensorStates[i]) {
-      sensorChanged = true;
-      prevInductionSensorStates[i] = inductionSensorState[i];
+      sensorChanged = true; // Induction sensor state has changed
+      prevInductionSensorStates[i] = inductionSensorState[i]; // Update previous state
     }
   }
 
-  return sensorChanged;
+  // Track time for sensor change timeout
+  static unsigned long lastChangeTime = millis();
+  unsigned long currentTime = millis();
+
+  // Update last change time if any sensor changes are detected
+  if (sensorChanged) {
+    lastChangeTime = currentTime;
+  }
+
+  // If no sensor changes detected for the timeout duration, perform reverse navigation
+  if (currentTime - lastChangeTime > timeoutDuration) {
+    Serial.println("No sensor change detected for timeout duration. Executing reverse navigation.");
+    full_reverse(10 * motortime);    // Perform reverse
+    full_turn_right(10 * motortime); // Perform turn
+  }
+}
+
+
+
+void checkOrientation(void) {
+  float currentOrientation = ori[0];
+  // Check if the orientation has changed significantly (beyond a small tolerance)
+  if (abs(currentOrientation - lastOrientation) > 5.0) {
+    // Reset the timer if orientation has changed
+    lastOrientationChangeTime = millis();
+    lastOrientation = currentOrientation;
+  }
+
+  // If the robot has been facing the same direction for too long
+  if (millis() - lastOrientationChangeTime > five_seconds) {
+    // Time to turn around
+    full_turn_left(10*motortime);
+    Serial.println("No direction change detected, turning");
+    
+    // After turning, reset the timer and the orientation
+    lastOrientationChangeTime = millis();
+    lastOrientation = ori[0]; // getOrientation() retrieves the updated orientation after turn
+  }
 }
 
 void PrintStates() {
@@ -104,7 +142,11 @@ void PrintStates() {
 //----------------------------------- Wall and Weight State Updates --------------------------------------//
 //--------------------------------------------------------------------------------------------------------//
 
-void UpdateWallState(uint32_t TopLeft, uint32_t TopMiddle, uint32_t TopRight) {
+void UpdateWallState(void) {
+  uint32_t TopLeft = GetAverageTOFReading(1);
+  uint32_t TopMiddle = GetAverageTOFReading(0);
+  uint32_t TopRight = GetAverageTOFReading(2);
+
   if (TopLeft < 30) {
     if (TopRight < 30) {
       if (TopMiddle < 30) {
@@ -124,13 +166,21 @@ void UpdateWallState(uint32_t TopLeft, uint32_t TopMiddle, uint32_t TopRight) {
   }
 }
 
-void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, uint32_t TopLeft, uint32_t TopRight, bool FrontInduction) {
+void UpdateWeightState(void) {
+  uint32_t MiddleRight = GetAverageTOFReading(4);
+  uint32_t BottomRight =  GetAverageTOFReading(6);
+  uint32_t MiddleLeft = GetAverageTOFReading(3);
+  uint32_t BottomLeft = GetAverageTOFReading(5);
+  uint32_t TopLeft = GetAverageTOFReading(1);
+  uint32_t TopRight = GetAverageTOFReading(2);
+  bool FrontInduction = !digitalRead(FrontInductionPin);
+
   if (FrontInduction) {
     if (weightState != WEIGHT_CONFIRMED) {
       weightState = WEIGHT_CONFIRMED;
     }
   } else if (weightState != WEIGHT_CONFIRMED) {
-    if (((MiddleRight > (BottomRight + 10)) || (MiddleLeft > (BottomLeft + 10))) && ((TopLeft < (MiddleLeft + 10)) || (TopRight < MiddleRight + 10))) {
+    if (((MiddleRight > (BottomRight + 10)) && (TopRight > (MiddleRight + 15))) || ((MiddleLeft > (BottomLeft + 10)) && (TopLeft > (MiddleLeft + 15)))) {
       timeWeightDetected = millis();
       weightState = WEIGHT_DETECTED;
     } else {
@@ -143,8 +193,15 @@ void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t Midd
 //----------------------------------- Navigation Logic ---------------------------------------------------//
 //--------------------------------------------------------------------------------------------------------//
 
-void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_t MiddleLeft, uint32_t MiddleRight, uint32_t BottomLeft, uint32_t BottomRight, bool BackInduction) {
-
+void Navigation() {
+  uint32_t TopMiddle = GetAverageTOFReading(0);
+  uint32_t TopLeft = GetAverageTOFReading(1);
+  uint32_t TopRight = GetAverageTOFReading(2);
+  uint32_t MiddleLeft = GetAverageTOFReading(3);
+  uint32_t MiddleRight = GetAverageTOFReading(4);
+  uint32_t BottomLeft = GetAverageTOFReading(5);
+  uint32_t BottomRight = GetAverageTOFReading(6);
+  bool BackInduction = !digitalRead(BackInductionPin);
 
     switch (currentState) {
       case STARTING:
@@ -322,30 +379,12 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
 
 void UpdateAll() {
   UpdateTOFReadings();
-  bool* electromagnetState = GetElectroMagnet();
-  bool* inductionSensorState = GetInduction();
   IMU();
-  // Update states
-  UpdateWallState(GetAverageTOFReading(1), GetAverageTOFReading(0), GetAverageTOFReading(2));
-  UpdateWeightState(GetAverageTOFReading(4), GetAverageTOFReading(6), GetAverageTOFReading(3), GetAverageTOFReading(5), GetAverageTOFReading(1) , GetAverageTOFReading(2), inductionSensorState[0]);
-
-  // Check for sensor changes and update lastChangeTime if necessary
-  if (CheckForSensorUpdates()) {
-    lastChangeTime = millis();
-  }
-
-  // If no change detected within the timeout duration, execute reverse navigation
-  if (millis() - lastChangeTime > timeoutDuration) {
-    Serial.println("No sensor change detected for 5 seconds. Executing reverse navigation.");
-    full_reverse(10 * motortime);
-    full_turn_right(10 * motortime);
-  } else {
-    Navigation(GetAverageTOFReading(0), GetAverageTOFReading(1), GetAverageTOFReading(2),
-               GetAverageTOFReading(3), GetAverageTOFReading(4), GetAverageTOFReading(5),
-               GetAverageTOFReading(6), inductionSensorState[1]);
-  }
-
-  // Print debugging information
+  UpdateWallState();
+  UpdateWeightState();
+  checkOrientation();
+  CheckForSensorUpdates();
+  Navigation();
   PrintInformation();
   PrintStates();
 }

@@ -31,6 +31,9 @@ const extern int BackInductionPin;
 const extern int numInductiveSensors;
 extern bool inductionSensorStates[];
 
+//Go Button
+const extern int GoButtonPin;
+
 
 // TOF Sensor Configuration
 const extern  byte SX1509_ADDRESS;
