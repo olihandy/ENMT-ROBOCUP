@@ -46,6 +46,8 @@ int8_t programState = 0;  //0 is moving around, no weight detected, 1 is wall is
 //For going home
 int FoundWall = 0; //0 not found, 1 right wall found, 2 left wall found
 int FoundHome = 0; //if found home
+double mTravelEncoderLeft = 0;
+double mTravelEncoderRight = 0;
 
 //Setup of LEDs
 const int LED1 = 4;  //Green on top set
@@ -117,7 +119,30 @@ boolean B_set1 = false;
 boolean A_set2 = false;
 boolean B_set2 = false;
 
+// Interrupt on A changing state
+void doEncoder1A(){
+  // Test transition
+  A_set1 = digitalRead(encoder1PinA) == HIGH;
+  // and adjust counter + if A leads B
+  encoderPos1 += (A_set1 != B_set1) ? +1 : -1;
+  
+  B_set1 = digitalRead(encoder1PinB) == HIGH;
+  // and adjust counter + if B follows A
+  encoderPos1 += (A_set1 == B_set1) ? +1 : -1;
+}
 
+
+// Interrupt on A changing state
+void doEncoder2A(){
+  // Test transition
+  A_set2 = digitalRead(encoder2PinA) == HIGH;
+  // and adjust counter + if A leads B
+  encoderPos2 += (A_set2 != B_set2) ? +1 : -1;
+  
+   B_set2 = digitalRead(encoder2PinB) == HIGH;
+  // and adjust counter + if B follows A
+  encoderPos2 += (A_set2 == B_set2) ? +1 : -1;
+}
 
 //IMU setup
 
@@ -161,10 +186,10 @@ Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
 
 uint16_t colorlist[4];
-uint16_t red_Start;
-uint16_t green_Start;
-uint16_t blue_Start;
-uint16_t clear_Start;
+static uint16_t red_Start;
+static uint16_t green_Start;
+static uint16_t blue_Start;
+static uint16_t clear_Start;
 
 
 
@@ -446,7 +471,6 @@ void printEvent(sensors_event_t* event) { //problems getting right event
   Serial.print(y);
   Serial.print(" |\tz= ");
   Serial.println(z);
-  Serial.print("\n");
   
   // return *XYZList;
 }
@@ -498,20 +522,30 @@ void colorStart() {
 }
 
 bool ColorCompareHome() { //Clear is unfiltered photodiode
+  bool HomeorNot = 0;
+
   if (((colorlist[1]-red_Start)<10) && ((colorlist[1]-red_Start)>(-10))) {
+    Serial.print("true");
     if (((colorlist[2]-green_Start)<10) && ((colorlist[2]-green_Start)>(-10))) {
+      Serial.print("true");
       if (((colorlist[3]-blue_Start)<10) && ((colorlist[3]-blue_Start)>(-10))) { //Multiplied by colorlist[0]/clear_start?
-        bool ColorCompareHome = true;
-      } else {
-        bool ColorCompareHome = false;
-      }
-    } else {
-      bool ColorCompareHome = false;
+        HomeorNot = 1;
+      } 
     }
-  } else {
-    bool ColorCompareHome = false;
   }
-  return ColorCompareHome;
+  Serial.print("Test of ColorCompareHome\n");
+  Serial.print(colorlist[1]);
+  Serial.print("    ");
+  Serial.print(colorlist[2]);
+  Serial.print("    ");
+  Serial.print(colorlist[3]);
+  Serial.print("    ");
+  Serial.print(red_Start);
+  Serial.print("    ");
+  Serial.print(green_Start);
+  Serial.print("    ");
+  Serial.print(blue_Start);
+  return HomeorNot;
 }
 
 
@@ -637,8 +671,8 @@ void loop() {
     StraightTotalTravelxperp += (mTravelEncoderLeft+mTravelEncoderRight)/2*sin(double(CurrentOrienZ)); //Should accumulate every iteration
     StraightTotalTravelypara += (mTravelEncoderLeft+mTravelEncoderRight)/2*cos(double(CurrentOrienZ));
   }
-  double mTravelEncoderLeft = 0;
-  double mTravelEncoderRight = 0;
+  mTravelEncoderLeft = 0;
+  mTravelEncoderRight = 0;
   Serial.println("Overall positions");
   Serial.println(StraightTotalTravelxperp);
   Serial.println(StraightTotalTravelypara);
@@ -676,16 +710,17 @@ void loop() {
 
   //State machine
 
-  if (elapsed_time>100) {
-    programState == 3;
+  if ((elapsed_time > 10) || (ElectroMagnet1On && ElectroMagnet2On && ElectroMagnet3On)) {
+    programState = 4;
   } else if (((MiddleLeft-BottomLeft>50) || (MiddleRight-BottomRight>50) || (InductionDetected == 1)) && (elapsed_time <= 100)) { //Object like weight is found
     programState = 2;
   } else if ((TopLeft < 20 || TopRight < 20 || TopMiddle < 20) && (elapsed_time <= 100)) { //state to turn
     programState = 1;
-  } else if ((elapsed_time > 100) || (ElectroMagnet1On && ElectroMagnet2On && ElectroMagnet3On)) { //state to go home
-    programState = 3;
   }
+
+  Serial.println("Time and State");
   Serial.print(elapsed_time);
+  Serial.print(programState);
   Serial.print("\t");
 
   // if (digitalRead(CollectPin)==1) { //For collection if weights still have to be in robot
@@ -905,20 +940,21 @@ void loop() {
       programState = 0;
     } 
   } else if (programState == 4) {
-    Serial.println("Going Home");
-    if ((ColorCompareHome() == true) || (FoundHome == 1)) {
-      FoundHome == 1;
-      stop(timedelay);
-    }
+    // bool Home = ColorCompareHome();
+    // if ((Home == 1) || (FoundHome == 1)) {
+    //   FoundHome = 1;
+    //   Serial.println("Found Home");
+    //   stop(timedelay); //Almost works but initial color variables not defined
     if (FoundWall == 0 && FoundHome == 0) {
       if (TopRight>20 && TopLeft>20) {
-        Serial.print("Moving Forward Home");
+        Serial.print("Moving Forward Home  ");
 
         int homeangle_to_robot = int(atan2(StraightTotalTravelypara, StraightTotalTravelxperp) * 180 / PI); // Calculate angle to home
         homeangle_to_robot += Startangle; // Adjust by initial angle (Startangle)
 
-        Serial.println(Startangle);
-        Serial.println(homeangle_to_robot);
+        Serial.print(Startangle);
+        Serial.print("  ");
+        Serial.print(homeangle_to_robot);
 
         // Adjust the home angle to point the robot toward home
         int heading_home_angle = homeangle_to_robot - 180;
@@ -948,21 +984,19 @@ void loop() {
         } else {
           full_forward(timedelay); // If within the desired range, move forward
         }
-      }
-      if (TopRight < 20 && TopMiddle<50) {
-        full_turn_left(timedelay);
+      } else if (TopRight < 20 && TopMiddle<50) {
+        full_turn_left(timedelay); //When at a wall
       } else if (TopLeft < 20 && TopMiddle<50) {
         full_turn_right(timedelay);
       }
-      if (TopRight < 30 && TopMiddle>50){
+      if ((TopRight < 30) && (TopMiddle>50)){
         FoundWall = 1; //If a right wall is found
-      }
-      if (TopLeft < 30 && TopMiddle>50){
+      } else if ((TopLeft < 30) && (TopMiddle>50)){
         FoundWall = 2; //If a left wall is found
       }
     } else if (FoundWall == 1 && FoundHome == 0) {
       full_forward(timedelay);
-      if (FoundWall = 1) {
+      if (FoundWall == 1) {
         if (TopRight > 30){
           full_turn_right(timedelay);
         } else if (TopRight<5) {
@@ -978,29 +1012,4 @@ void loop() {
     }
   }
   Serial.println(); //Next line
-}
-
-// Interrupt on A changing state
-void doEncoder1A(){
-  // Test transition
-  A_set1 = digitalRead(encoder1PinA) == HIGH;
-  // and adjust counter + if A leads B
-  encoderPos1 += (A_set1 != B_set1) ? +1 : -1;
-  
-  B_set1 = digitalRead(encoder1PinB) == HIGH;
-  // and adjust counter + if B follows A
-  encoderPos1 += (A_set1 == B_set1) ? +1 : -1;
-}
-
-
-// Interrupt on A changing state
-void doEncoder2A(){
-  // Test transition
-  A_set2 = digitalRead(encoder2PinA) == HIGH;
-  // and adjust counter + if A leads B
-  encoderPos2 += (A_set2 != B_set2) ? +1 : -1;
-  
-   B_set2 = digitalRead(encoder2PinB) == HIGH;
-  // and adjust counter + if B follows A
-  encoderPos2 += (A_set2 == B_set2) ? +1 : -1;
 }
