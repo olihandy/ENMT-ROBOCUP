@@ -2,13 +2,15 @@
 
 // Motor setup
 Servo myservoA, myservoB;  // create servo object to control a servo, A IS LEFT
-int stop_speed = 1500;     // 1500 = stop, 1950 = full speed forward, 1100 = full back
-int full_reverse_speed = 1950;
 int full_forward_speed = 1100;
-int half_reverse_speed = 1750;
 int half_forward_speed = 1250;
+int quarter_forward_speed = 1380;
+int stop_speed = 1500;     // 1500 = stop, 1950 = full speed forward, 1100 = full back
+int quarter_reverse_speed = 1670;
+int half_reverse_speed = 1750;
+int full_reverse_speed = 1950;
+
 int timedelay = 100;
-float kp = 0.5;  // Proportional constant for speed control (tune this)
 
 int FrontElectromagnetPin = 14;
 int MiddleElectromagnetPin = 20;
@@ -94,6 +96,12 @@ void forward_right(int timedelay) {
   delay(timedelay);
 }
 
+void forward_right_right(int timedelay) {
+  myservoA.writeMicroseconds(quarter_forward_speed);
+  myservoB.writeMicroseconds(full_forward_speed);
+  delay(timedelay);
+}
+
 void full_turn_left(int timedelay) {
   myservoA.writeMicroseconds(full_forward_speed);
   myservoB.writeMicroseconds(full_reverse_speed);
@@ -103,8 +111,14 @@ void full_turn_left(int timedelay) {
 void forward_left(int timedelay) {
   myservoA.writeMicroseconds(full_forward_speed);
   myservoB.writeMicroseconds(half_forward_speed);
+  delay(timedelay);
 }
 
+void forward_left_left(int timedelay) {
+  myservoA.writeMicroseconds(full_forward_speed);
+  myservoB.writeMicroseconds(quarter_forward_speed);
+  delay(timedelay);
+}
 
 //--------------------------------------------------------------------------------------------------------//
 //----------------------------------------- Stepper Motors ------------------------------------------------//

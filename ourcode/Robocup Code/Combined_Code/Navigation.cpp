@@ -162,7 +162,7 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
         break;
 
       case DRIVING:
-        if(TopMiddle > 400) {
+        if(ori[2] < -5) {
           full_reverse(10*motortime);
         }
         switch (weightState) {
@@ -211,15 +211,23 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
               full_reverse(5*motortime);
               full_turn_right(3*motortime);
             } else {
-              if (BottomLeft > (BottomRight + 5)) {
-                full_turn_right(motortime);
-                forward_right(2*motortime);
-              } else if (BottomRight > (BottomLeft + 5)) {
-                full_turn_left(motortime);                
-                forward_left(2*motortime);
+              if(BottomLeft < 40 || BottomRight <40) {
+                if (BottomLeft > (BottomRight + 5)) {
+                  forward_right_right(3*motortime);
+                } else if (BottomRight > (BottomLeft + 5)) {
+                  forward_left_left(3*motortime);
+                } else {
+                  half_forward(motortime);
+                } 
               } else {
-                half_forward(motortime);
-              } 
+              if (BottomLeft > (BottomRight + 5)) {
+                forward_right(3*motortime);
+              } else if (BottomRight > (BottomLeft + 5)) {
+                forward_left(3*motortime);
+              } else {
+                half_forward(motortime);                
+              }
+            }
             }
             break;
           case WEIGHT_CONFIRMED:
@@ -316,7 +324,7 @@ void UpdateAll() {
   UpdateTOFReadings();
   bool* electromagnetState = GetElectroMagnet();
   bool* inductionSensorState = GetInduction();
-
+  IMU();
   // Update states
   UpdateWallState(GetAverageTOFReading(1), GetAverageTOFReading(0), GetAverageTOFReading(2));
   UpdateWeightState(GetAverageTOFReading(4), GetAverageTOFReading(6), GetAverageTOFReading(3), GetAverageTOFReading(5), GetAverageTOFReading(1) , GetAverageTOFReading(2), inductionSensorState[0]);

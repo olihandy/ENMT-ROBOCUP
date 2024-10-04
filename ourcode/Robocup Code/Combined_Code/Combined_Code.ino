@@ -3,12 +3,13 @@
 #include "IMU.h"
 
 void setup() {
-  // setupSensors();
-  // setupActuators();
-  // delay(2000);
+  setupSensors();
+  setupActuators();
   setup_IMU();
+  delay(2000);
+
 }
 
 void loop() {
-  IMU();
+  UpdateAll();
 }

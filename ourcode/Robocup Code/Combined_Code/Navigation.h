@@ -3,16 +3,9 @@
 
 #include "Sensors.h" 
 #include "Actuators.h"
+#include "IMU.h"
 
-// Boolean flags for robot state
-extern bool ReadyToDrive;
-extern bool WeightDetected;
-extern bool ThreeWeightsCollected;
-extern bool TimeToGo;
-extern bool homeReached;
-
-// Program state and motor timing
-extern int motortime;
+extern float ori[3]; // Declare it as extern so it can be accessed in other files
 
 // Wall detection state
 enum WallDetectionState {
