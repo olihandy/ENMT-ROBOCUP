@@ -19,7 +19,7 @@ unsigned long lastOrientationChangeTime = 0;
 float lastOrientation = 0;
 
 int stepper_motor_fast = 20;
-int stepper_motor_slow = 50;
+int stepper_motor_slow = 40;
 int motortime = 100;
 
 WallDetectionState wallState = NO_WALL;
@@ -301,10 +301,10 @@ void Navigation() {
                 }
             }else if(NumWeightsCollected > 0) {
               stop(motortime);
-              big_step_down(stepper_motor_slow);
+              big_step_down(stepper_motor_fast);
               half_forward(10 * motortime);
               stop(motortime);
-              little_step_down(stepper_motor_slow);
+              little_step_down(stepper_motor_fast);
               currentState = COLLECTING_WEIGHT;
             }
             break;
@@ -326,7 +326,7 @@ void Navigation() {
             stop(motortime);
             Serial.println("Electromagnet 1 activated");
             NumWeightsCollected++;
-            go_up(stepper_motor_slow);
+            go_up(stepper_motor_fast);
             weightState = WEIGHT_NOT_DETECTED;            
             currentState = DRIVING;
 
@@ -334,7 +334,7 @@ void Navigation() {
             turn_on_electromagnet(2);
             Serial.println("Electromagnet 2 activated");
             stop(motortime);           
-            go_up(stepper_motor_slow);
+            go_up(stepper_motor_fast);
             currentState = DRIVING;
             weightState = WEIGHT_NOT_DETECTED;
             NumWeightsCollected++;
@@ -354,7 +354,7 @@ void Navigation() {
         homeReached = 1;
         if (homeReached) {
           stop(motortime);
-          go_down(stepper_motor_slow);
+          go_down(stepper_motor_fast);
           turn_off_electromagnet(0);
           turn_off_electromagnet(1);
           turn_off_electromagnet(2);
