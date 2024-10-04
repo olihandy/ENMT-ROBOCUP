@@ -175,14 +175,14 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
                 full_forward(motortime);
                 break;
               case LEFT_WALL_DETECTED:
-                proportional_forward_right(30, TopLeft);
+                forward_right(motortime);
                 break;
               case SLAB_WALL_DETECTED:
                 full_reverse(5*motortime);
                 full_turn_left(5*motortime);
                 break;
               case RIGHT_WALL_DETECTED:
-                proportional_forward_left(30, TopRight);
+                forward_left(motortime);
                 break;
              case NO_WALL:
              default:
@@ -207,10 +207,10 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
               } else {
                 full_turn_right(5*motortime);
               }
-            } else if(TopLeft < 10) {
+            } else if(TopLeft < 20) {
               full_reverse(3*motortime);
               forward_left(3*motortime);
-            } else if(TopRight < 10) {
+            } else if(TopRight < 20) {
               full_reverse(3*motortime);
               forward_right(3*motortime);
             } else {
