@@ -105,8 +105,8 @@ void PrintStates() {
 //--------------------------------------------------------------------------------------------------------//
 
 void UpdateWallState(uint32_t TopLeft, uint32_t TopMiddle, uint32_t TopRight) {
-  if (TopLeft < 50) {
-    if (TopRight < 50) {
+  if (TopLeft < 30) {
+    if (TopRight < 30) {
       if (TopMiddle < 30) {
         wallState = WALL_AHEAD;
       } else {
@@ -124,13 +124,13 @@ void UpdateWallState(uint32_t TopLeft, uint32_t TopMiddle, uint32_t TopRight) {
   }
 }
 
-void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, bool FrontInduction) {
+void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t MiddleLeft, uint32_t BottomLeft, uint32_t TopLeft, uint32_t TopRight, bool FrontInduction) {
   if (FrontInduction) {
     if (weightState != WEIGHT_CONFIRMED) {
       weightState = WEIGHT_CONFIRMED;
     }
   } else if (weightState != WEIGHT_CONFIRMED) {
-    if ((MiddleRight > (BottomRight + 10)) || (MiddleLeft > (BottomLeft + 10))) {
+    if (((MiddleRight > (BottomRight + 10)) || (MiddleLeft > (BottomLeft + 10))) && ((TopLeft < (MiddleLeft + 10)) || (TopRight < MiddleRight + 10))) {
       timeWeightDetected = millis();
       weightState = WEIGHT_DETECTED;
     } else {
@@ -178,46 +178,45 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
                 forward_right(motortime);
                 break;
               case SLAB_WALL_DETECTED:
-                full_reverse(5*motortime);
-                full_turn_left(5*motortime);
+                full_reverse(10*motortime);
+                if (TopLeft > (TopRight)) {
+                  full_turn_left(5*motortime);
+                } else {
+                  full_turn_right(5*motortime);
+                }
                 break;
               case RIGHT_WALL_DETECTED:
                 forward_left(motortime);
                 break;
              case NO_WALL:
              default:
-              if(TopMiddle < 300) {
-               if (TopLeft > TopRight + 20) {
-                  forward_left(motortime);
-                } else {
-                  forward_right(motortime);
-                }
-              } else {
-                full_turn_right(2*motortime);
-                half_forward(motortime);
-              }
+              full_forward(motortime);
               break;
                 }
             break;
 
           case WEIGHT_DETECTED:
             if(TopMiddle < 20) {
+              full_reverse(5*motortime);
               if(TopLeft > TopRight){
                 full_turn_left(5*motortime);
               } else {
                 full_turn_right(5*motortime);
               }
-            } else if(TopLeft < 20) {
-              full_reverse(3*motortime);
-              forward_left(3*motortime);
-            } else if(TopRight < 20) {
-              full_reverse(3*motortime);
-              forward_right(3*motortime);
+            } else if(TopLeft < 10) {
+              full_reverse(5*motortime);
+              full_turn_left(3*motortime);
+
+            } else if(TopRight < 10) {
+              full_reverse(5*motortime);
+              full_turn_right(3*motortime);
             } else {
               if (BottomLeft > (BottomRight + 5)) {
-                forward_right(motortime);
+                full_turn_right(motortime);
+                forward_right(2*motortime);
               } else if (BottomRight > (BottomLeft + 5)) {
-                forward_left(motortime);
+                full_turn_left(motortime);                
+                forward_left(2*motortime);
               } else {
                 half_forward(motortime);
               } 
@@ -320,7 +319,7 @@ void UpdateAll() {
 
   // Update states
   UpdateWallState(GetAverageTOFReading(1), GetAverageTOFReading(0), GetAverageTOFReading(2));
-  UpdateWeightState(GetAverageTOFReading(4), GetAverageTOFReading(6), GetAverageTOFReading(3), GetAverageTOFReading(5), inductionSensorState[0]);
+  UpdateWeightState(GetAverageTOFReading(4), GetAverageTOFReading(6), GetAverageTOFReading(3), GetAverageTOFReading(5), GetAverageTOFReading(1) , GetAverageTOFReading(2), inductionSensorState[0]);
 
   // Check for sensor changes and update lastChangeTime if necessary
   if (CheckForSensorUpdates()) {
