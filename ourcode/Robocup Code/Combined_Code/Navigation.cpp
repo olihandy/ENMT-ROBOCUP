@@ -324,11 +324,11 @@ void Navigation(void) {
     case COLLECTING_WEIGHT:
         if (NumWeightsCollected == 0) {
             stop_blocking(motortime);
-            turn_on_electromagnet(0);
+            digitalWrite(BackElectromagnetPin, HIGH);  // Activate first electromagnet
             Serial.println("Electromagnet 0 activated");
             stop_blocking(motortime);
-            NumWeightsCollected++;
             go_up(stepper_motor_fast);
+            NumWeightsCollected++;
             weightState = WEIGHT_NOT_DETECTED;
             currentState = DRIVING;
 

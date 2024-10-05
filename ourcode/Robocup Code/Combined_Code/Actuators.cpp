@@ -13,7 +13,7 @@ int full_reverse_speed = 1950;
 
 int FrontElectromagnetPin = 14;
 int MiddleElectromagnetPin = 20;
-int BackElectromagnetPin = 25;
+int BackElectromagnetPin = 24;
 
 // Stepper motor setup
 int num_steps = 67000;      // Fully down and up

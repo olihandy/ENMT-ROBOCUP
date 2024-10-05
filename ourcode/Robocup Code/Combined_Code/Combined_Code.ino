@@ -126,6 +126,7 @@ void setup() {
   int_init();
   task_init();
   Wire.begin();
+  Serial.println("System Initialised");
 }
 
 //**********************************************************************************
@@ -135,8 +136,9 @@ void setup() {
 void pin_init(){
     pinMode(IO_POWER, OUTPUT);              //Pin 49 is used to enable IO power
     digitalWrite(IO_POWER, 1);              //Enable IO power on main CPU board
-    Serial.println("Pins have been initialised \n"); 
     pinMode(STARTBUT, INPUT_PULLUP);
+    Serial.println("Pins have been initialised \n"); 
+
 }
 
 
@@ -146,7 +148,6 @@ void toggle_prog_ISR() {
     tNavigation.disable();
     tCheck_orientation.disable();
     tCheck_sensor_updates.disable();
-    tPrint_information.disable();
     delay(100);
   } else {
     setupSensors();
@@ -154,7 +155,6 @@ void toggle_prog_ISR() {
     tNavigation.enable();
     tCheck_orientation.enable();
     tCheck_sensor_updates.enable();
-    tPrint_information.enable();    
     delay(100);
   }
   runProgram = !runProgram;
@@ -211,7 +211,7 @@ void task_init() {
 //**********************************************************************************
 void loop() {
   // unsigned long start_time = millis();
-  // Navigation();
+  // GetTOF();
   // unsigned long end_time = millis();
   // Serial.println(end_time-start_time);
 
