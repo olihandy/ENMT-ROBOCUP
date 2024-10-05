@@ -12,7 +12,7 @@ bool TimeToGo = false;
 bool homeReached = false;
 
 int LengthOfRobot = 35;
-unsigned long five_seconds = 5000;
+int five_seconds = 5000;
 int NOCHANGETHRESHOLD = 5;
 int timeWeightDetected;
 unsigned long lastOrientationChangeTime = 0;
@@ -44,6 +44,11 @@ uint16_t BottomLeft = averagedTOFreadings[5];
 uint16_t BottomRight = averagedTOFreadings[6];
 bool BackInduction = !digitalRead(BackInductionPin);
 bool FrontInduction = !digitalRead(FrontInductionPin);
+
+extern float ori[3];
+
+float pitch = ori[2];
+float yaw = ori[0];
 
 uint16_t prevTOFReadings[7];
 bool prevInductionSensorStates[2];
@@ -78,12 +83,12 @@ void CheckForSensorUpdates() {
 
 
 void checkOrientation(void) {
-  float currentOrientation = ori[0];
+  yaw = ori[0];
   // Check if the orientation has changed significantly (beyond a small tolerance)
-  if (abs(currentOrientation - lastOrientation) > 5.0) {
+  if (abs(yaw - lastOrientation) > 35.0) {
     // Reset the timer if orientation has changed
     lastOrientationChangeTime = millis();
-    lastOrientation = currentOrientation;
+    lastOrientation = yaw;
   }
 
   // If the robot has been facing the same direction for too long
@@ -207,6 +212,7 @@ void Navigation(void) {
   BottomLeft = averagedTOFreadings[5];
   BottomRight = averagedTOFreadings[6];
   BackInduction = !digitalRead(BackInductionPin);  
+  yaw = ori[2];
     switch (currentState) {
       case STARTING:
         // Take start readings, then set readyToDrive
@@ -223,7 +229,7 @@ void Navigation(void) {
         break;
 
       case DRIVING:
-        if(ori[2] < -5) {
+        if(yaw < -5 || yaw > 5) {
           full_reverse(10*motortime);
         }
         switch (weightState) {
@@ -317,6 +323,7 @@ void Navigation(void) {
 
     case COLLECTING_WEIGHT:
         if (NumWeightsCollected == 0) {
+            stop_blocking(motortime);
             turn_on_electromagnet(0);
             Serial.println("Electromagnet 0 activated");
             stop_blocking(motortime);
@@ -357,12 +364,12 @@ void Navigation(void) {
         stop(motortime);
         homeReached = 1;
         if (homeReached) {
-          stop(motortime);
+          stop_blocking(motortime);
           go_down(stepper_motor_fast);
           turn_off_electromagnet(0);
           turn_off_electromagnet(1);
           turn_off_electromagnet(2);
-          stop(motortime);
+          stop_blocking(motortime);
           go_up(stepper_motor_fast);
           NumWeightsCollected = 0;
           currentState = FINISHED;

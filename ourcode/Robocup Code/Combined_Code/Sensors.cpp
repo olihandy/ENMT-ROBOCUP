@@ -30,9 +30,6 @@ extern int MiddleElectromagnetPin;
 extern int BackElectromagnetPin;
 const int numElectroMagnets = 3;
 
-// Go Button
-const int GoButtonPin = 23;
-
 // INDUCTION
 const int FrontInductionPin = 27; 
 const int BackInductionPin = 26;
@@ -70,8 +67,6 @@ bool inductionSensorStates[numInductiveSensors];
 
 void setupSensors() {
   Serial.begin(9600);
-
-  pinMode(GoButtonPin, INPUT);
 
   // ElectroMagnet
   pinMode(FrontElectromagnetPin, OUTPUT);
@@ -115,7 +110,7 @@ void setupSensors() {
     if (!sensorsL1[i].init()) {
       Serial.print("Failed to detect and initialize sensor L1 ");
       Serial.println(i);
-      while (1);
+      // while (1);
     }
     sensorsL1[i].setAddress(VL53L1X_ADDRESS_START + i);
     sensorsL1[i].startContinuous(50);
@@ -133,7 +128,7 @@ void setupSensors() {
     if (!sensorsL0[i].init()) {
       Serial.print("Failed to detect and initialize sensor L0 ");
       Serial.println(i);
-      while (1);
+      // while (1);
     }
     sensorsL0[i].setAddress(VL53L0X_ADDRESS_START + i);
     sensorsL0[i].startContinuous(50);

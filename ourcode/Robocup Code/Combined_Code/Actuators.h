@@ -14,7 +14,7 @@ extern int BackElectromagnetPin;
 extern int electromagnets_activated;
 
 // Function declarations
-void setupActuators();
+void setupActuators(void);
 void nonBlockingMotorAction(unsigned long interval, int speedA, int speedB);
 void full_reverse(int timedelay);
 void reverse_left(int timedelay);

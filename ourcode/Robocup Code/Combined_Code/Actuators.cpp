@@ -13,7 +13,7 @@ int full_reverse_speed = 1950;
 
 int FrontElectromagnetPin = 14;
 int MiddleElectromagnetPin = 20;
-int BackElectromagnetPin = 24;
+int BackElectromagnetPin = 25;
 
 // Stepper motor setup
 int num_steps = 67000;      // Fully down and up
@@ -41,6 +41,11 @@ void setupActuators() {
   pinMode(FrontElectromagnetPin, OUTPUT);
   pinMode(MiddleElectromagnetPin, OUTPUT);
   pinMode(BackElectromagnetPin, OUTPUT);
+
+  digitalWrite(FrontElectromagnetPin, LOW);
+  digitalWrite(MiddleElectromagnetPin, LOW);
+  digitalWrite(BackElectromagnetPin, HIGH);
+ 
 }
 
 //--------------------------------------------------------------------------------------------------------//

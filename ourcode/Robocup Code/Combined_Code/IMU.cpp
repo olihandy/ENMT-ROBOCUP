@@ -62,14 +62,11 @@
   // Main function to process IMU data
   void IMU(void) {
     IMUGetOrientation();                  // Retrieve position and orientation data
-    PreviousTime = millis();      // Update previous time
-    AverageAngleX = ori[0];
-    AverageAngleZ = ori[2];
   }
 
   void IMU_print(void) {
     Serial.print("Orientation X: ");
-    Serial.println(AverageAngleX);
+    Serial.println(ori[0]);
     Serial.print("Orientation Z: ");
-    Serial.println(AverageAngleZ);
+    Serial.println(ori[2]);
   }

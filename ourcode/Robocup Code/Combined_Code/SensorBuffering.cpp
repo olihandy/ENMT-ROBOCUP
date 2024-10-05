@@ -24,6 +24,9 @@ uint16_t * initCircBuf (circBuf_t *buffer, uint16_t size)
 // advance windex, modulo (buffer size).
 void writeCircBuf (circBuf_t *buffer, uint16_t entry)
 {
+  if(entry > 8100) {
+    entry = 1500;
+  }
   buffer->data[buffer->windex] = entry;
   buffer->windex++;
   if (buffer->windex >= buffer->size) {

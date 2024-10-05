@@ -15,7 +15,15 @@
 #include <Adafruit_TCS34725.h>      //colour sensor
 #include <Wire.h>                   //for I2C and SPI
 #include <TaskScheduler.h>          //scheduler 
-
+#include <stdio.h>
+#include <Wire.h>
+#include <VL53L1X.h>
+#include <VL53L0X.h>
+#include <SparkFunSX1509.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <utility/imumaths.h>
+#include "SensorBuffering.h"
 
 #include "Actuators.h"
 #include "IMU.h"
@@ -23,6 +31,7 @@
 #include "Sensors.h"
 #include "SensorBuffering.h"
 
+bool runProgram = false;
 
 //**********************************************************************************
 // Local Definitions
@@ -42,9 +51,9 @@
 #define CHECK_ORIENTATION_TASK_PERIOD       50     //Takes 0ms?
 #define CHECK_SENSOR_UPDATES_TASK_PERIOD    50     //Takes 0ms?
 #define NAVIGATION_TASK_PERIOD              50    //Takes 100 ms?
-#define PRINT_IMU_TASK_PERIOD               200       //Takes 0ms?
-#define PRINT_INFORMATION_TASK_PERIOD       200     //Takes 130 ms
-#define PRINT_STATES_TASK_PERIOD            200     //Takes 0 ms? 
+#define PRINT_IMU_TASK_PERIOD               500       //Takes 0ms?
+#define PRINT_INFORMATION_TASK_PERIOD       500     //Takes 130 ms
+#define PRINT_STATES_TASK_PERIOD            500     //Takes 0 ms? 
 
 // Task execution amount definitions
 // -1 means indefinitely
@@ -64,6 +73,7 @@
 
 // Pin deffinitions
 #define IO_POWER  49
+#define STARTBUT 23
 
 // Serial deffinitions
 #define BAUD_RATE 9600
@@ -101,18 +111,19 @@ Scheduler taskManager;
 //**********************************************************************************
 
 void pin_init();
-void robot_init();
 void task_init();
+void stopAllActions();
 
 //**********************************************************************************
 // put your setup code here, to run once:
 //**********************************************************************************
 void setup() {
   Serial.begin(BAUD_RATE);
+  pin_init();
   setupActuators();
   setup_IMU();
   setupSensors();
-  pin_init();
+  int_init();
   task_init();
   Wire.begin();
 }
@@ -122,11 +133,35 @@ void setup() {
 // Set as high or low
 //**********************************************************************************
 void pin_init(){
-    
-    Serial.println("Pins have been initialised \n"); 
-
     pinMode(IO_POWER, OUTPUT);              //Pin 49 is used to enable IO power
     digitalWrite(IO_POWER, 1);              //Enable IO power on main CPU board
+    Serial.println("Pins have been initialised \n"); 
+    pinMode(STARTBUT, INPUT_PULLUP);
+}
+
+
+void toggle_prog_ISR() {
+  if(runProgram) {
+    stop(10);
+    tNavigation.disable();
+    tCheck_orientation.disable();
+    tCheck_sensor_updates.disable();
+    tPrint_information.disable();
+    delay(100);
+  } else {
+    setupSensors();
+    setupActuators();
+    tNavigation.enable();
+    tCheck_orientation.enable();
+    tCheck_sensor_updates.enable();
+    tPrint_information.enable();    
+    delay(100);
+  }
+  runProgram = !runProgram;
+}
+
+void int_init() {
+  attachInterrupt(digitalPinToInterrupt(STARTBUT), toggle_prog_ISR, FALLING);
 }
 
 
@@ -181,4 +216,5 @@ void loop() {
   // Serial.println(end_time-start_time);
 
   taskManager.execute();    //execute the scheduler
+
 }
