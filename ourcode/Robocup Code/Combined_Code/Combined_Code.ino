@@ -149,8 +149,8 @@ void task_init() {
   taskManager.addTask(tCheck_sensor_updates);
   taskManager.addTask(tNavigation); 
   taskManager.addTask(tIMU_print);
-  // taskManager.addTask(tPrint_information);
-  // taskManager.addTask(tPrint_states);
+  taskManager.addTask(tPrint_information);
+  taskManager.addTask(tPrint_states);
 
   // Enable the tasks
   tRead_TOF.enable();

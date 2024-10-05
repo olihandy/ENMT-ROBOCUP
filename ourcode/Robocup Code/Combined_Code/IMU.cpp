@@ -12,8 +12,6 @@
   #include <arduino.h>
 
   // Global variables for IMU data
-  static float OrientationXList[50] = { 0 }; // List for angular accelerations in Z-axis
-  static float OrientationZList[50] = { 0 };
   double StartAngle = 0;                // Starting angle
   uint16_t BNO055_SAMPLERATE_DELAY_MS = 100; // Sample rate delay
   sensors_event_t orientationData;
@@ -65,7 +63,6 @@
   void IMU(void) {
     IMUGetOrientation();                  // Retrieve position and orientation data
     PreviousTime = millis();      // Update previous time
-    double timeDifference = ((millis() - PreviousTime) / 1000.0); // Calculate time difference in seconds  
     AverageAngleX = ori[0];
     AverageAngleZ = ori[2];
   }
