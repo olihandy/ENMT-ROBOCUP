@@ -143,20 +143,6 @@ void pin_init(){
 
 
 void toggle_prog_ISR() {
-  if(runProgram) {
-    stop(10);
-    tNavigation.disable();
-    tCheck_orientation.disable();
-    tCheck_sensor_updates.disable();
-    delay(100);
-  } else {
-    setupSensors();
-    setupActuators();
-    tNavigation.enable();
-    tCheck_orientation.enable();
-    tCheck_sensor_updates.enable();
-    delay(100);
-  }
   runProgram = !runProgram;
 }
 
@@ -210,11 +196,19 @@ void task_init() {
 // put your main code here, to run repeatedly
 //**********************************************************************************
 void loop() {
-  // unsigned long start_time = millis();
-  // GetTOF();
-  // unsigned long end_time = millis();
-  // Serial.println(end_time-start_time);
 
-  taskManager.execute();    //execute the scheduler
+  if(runProgram) {
+    tNavigation.enable();
+    tCheck_orientation.enable();
+    tCheck_sensor_updates.enable();
+    taskManager.execute();    //execute the scheduler
+
+  } else {
+    stop(1);
+    tNavigation.disable();
+    tCheck_orientation.disable();
+    tCheck_sensor_updates.disable();
+  }
+
 
 }

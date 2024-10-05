@@ -44,7 +44,7 @@ void setupActuators() {
 
   digitalWrite(FrontElectromagnetPin, LOW);
   digitalWrite(MiddleElectromagnetPin, LOW);
-  digitalWrite(BackElectromagnetPin, HIGH);
+  digitalWrite(BackElectromagnetPin, LOW);
  
 }
 
