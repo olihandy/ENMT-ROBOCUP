@@ -26,6 +26,25 @@ WallDetectionState wallState = NO_WALL;
 RobotState currentState = STARTING;
 WeightDetectionState weightState = WEIGHT_NOT_DETECTED;
 
+int numTOFs =7;
+
+extern bool electromagnetStates[3];
+extern bool inductionSensorStates[2];
+extern uint16_t averagedTOFreadings[7];
+
+const extern int numReadings;
+extern uint16_t averagedTOFreadings[];
+
+uint16_t TopMiddle = averagedTOFreadings[0];
+uint16_t TopLeft = averagedTOFreadings[1];
+uint16_t TopRight = averagedTOFreadings[2];
+uint16_t MiddleLeft = averagedTOFreadings[3];
+uint16_t MiddleRight = averagedTOFreadings[4];
+uint16_t BottomLeft = averagedTOFreadings[5];
+uint16_t BottomRight = averagedTOFreadings[6];
+bool BackInduction = !digitalRead(BackInductionPin);
+bool FrontInduction = !digitalRead(FrontInductionPin);
+
 uint16_t prevTOFReadings[7];
 bool prevInductionSensorStates[2];
 
@@ -35,32 +54,19 @@ bool prevInductionSensorStates[2];
 
 void CheckForSensorUpdates() {
   bool sensorChanged = false;
-  
-  UpdateTOFReadings();
-  for (int i = 0; i < numReadings; i++) {
-    if (abs(TOFreadings[i] - prevTOFReadings[i]) > NOCHANGETHRESHOLD) {
+  for (int i = 0; i < numTOFs; i++) {
+    if (abs(averagedTOFreadings[i] - prevTOFReadings[i]) > NOCHANGETHRESHOLD) {
       sensorChanged = true; // Sensor value has changed significantly
-      prevTOFReadings[i] = TOFreadings[i];
+      prevTOFReadings[i] = averagedTOFreadings[i];
     }
   }
-
-  bool* inductionSensorState = GetInduction(); 
-  for (int i = 0; i < numInductiveSensors; i++) {
-    if (inductionSensorState[i] != prevInductionSensorStates[i]) {
-      sensorChanged = true; // Induction sensor state has changed
-      prevInductionSensorStates[i] = inductionSensorState[i]; // Update previous state
-    }
-  }
-
   // Track time for sensor change timeout
   static unsigned long lastChangeTime = millis();
   unsigned long currentTime = millis();
-
   // Update last change time if any sensor changes are detected
   if (sensorChanged) {
     lastChangeTime = currentTime;
   }
-
   // If no sensor changes detected for the timeout duration, perform reverse navigation
   if (currentTime - lastChangeTime > timeoutDuration) {
     Serial.println("No sensor change detected for timeout duration. Executing reverse navigation.");
@@ -92,7 +98,7 @@ void checkOrientation(void) {
   }
 }
 
-void PrintStates() {
+void PrintStates(void) {
   // Print out all states for debugging
   Serial.print("ReadyToDrive: ");
   Serial.println(ReadyToDrive ? "True" : "False");
@@ -143,13 +149,12 @@ void PrintStates() {
 //--------------------------------------------------------------------------------------------------------//
 
 void UpdateWallState(void) {
-  uint32_t TopLeft = GetAverageTOFReading(1);
-  uint32_t TopMiddle = GetAverageTOFReading(0);
-  uint32_t TopRight = GetAverageTOFReading(2);
-
-  if (TopLeft < 30) {
-    if (TopRight < 30) {
-      if (TopMiddle < 30) {
+  TopMiddle = averagedTOFreadings[0];
+  TopLeft = averagedTOFreadings[1];
+  TopRight = averagedTOFreadings[2];
+  if (TopLeft < 300) {
+    if (TopRight < 300) {
+      if (TopMiddle < 300) {
         wallState = WALL_AHEAD;
       } else {
         wallState = SLIT_DETECTED;
@@ -157,9 +162,9 @@ void UpdateWallState(void) {
     } else {
       wallState = LEFT_WALL_DETECTED;
     }
-  } else if (TopMiddle < 30) {
+  } else if (TopMiddle < 300) {
     wallState = SLAB_WALL_DETECTED;
-  } else if (TopRight < 30) {
+  } else if (TopRight < 300) {
     wallState = RIGHT_WALL_DETECTED;
   } else {
     wallState = NO_WALL;
@@ -167,20 +172,20 @@ void UpdateWallState(void) {
 }
 
 void UpdateWeightState(void) {
-  uint32_t MiddleRight = GetAverageTOFReading(4);
-  uint32_t BottomRight =  GetAverageTOFReading(6);
-  uint32_t MiddleLeft = GetAverageTOFReading(3);
-  uint32_t BottomLeft = GetAverageTOFReading(5);
-  uint32_t TopLeft = GetAverageTOFReading(1);
-  uint32_t TopRight = GetAverageTOFReading(2);
-  bool FrontInduction = !digitalRead(FrontInductionPin);
-
+  TopMiddle = averagedTOFreadings[0];
+  TopLeft = averagedTOFreadings[1];
+  TopRight = averagedTOFreadings[2];
+  MiddleLeft = averagedTOFreadings[3];
+  MiddleRight = averagedTOFreadings[4];
+  BottomLeft = averagedTOFreadings[5];
+  BottomRight = averagedTOFreadings[6];
+  FrontInduction = !digitalRead(FrontInductionPin);
   if (FrontInduction) {
     if (weightState != WEIGHT_CONFIRMED) {
       weightState = WEIGHT_CONFIRMED;
     }
   } else if (weightState != WEIGHT_CONFIRMED) {
-    if (((MiddleRight > (BottomRight + 10)) && (TopRight > (MiddleRight + 15))) || ((MiddleLeft > (BottomLeft + 10)) && (TopLeft > (MiddleLeft + 15)))) {
+    if (((MiddleRight > (BottomRight + 100)) && (TopRight > (MiddleRight + 150))) || ((MiddleLeft > (BottomLeft + 100)) && (TopLeft > (MiddleLeft + 150)))) {
       timeWeightDetected = millis();
       weightState = WEIGHT_DETECTED;
     } else {
@@ -193,20 +198,19 @@ void UpdateWeightState(void) {
 //----------------------------------- Navigation Logic ---------------------------------------------------//
 //--------------------------------------------------------------------------------------------------------//
 
-void Navigation() {
-  uint32_t TopMiddle = GetAverageTOFReading(0);
-  uint32_t TopLeft = GetAverageTOFReading(1);
-  uint32_t TopRight = GetAverageTOFReading(2);
-  uint32_t MiddleLeft = GetAverageTOFReading(3);
-  uint32_t MiddleRight = GetAverageTOFReading(4);
-  uint32_t BottomLeft = GetAverageTOFReading(5);
-  uint32_t BottomRight = GetAverageTOFReading(6);
-  bool BackInduction = !digitalRead(BackInductionPin);
-
+void Navigation(void) {
+  TopMiddle = averagedTOFreadings[0];
+  TopLeft = averagedTOFreadings[1];
+  TopRight = averagedTOFreadings[2];
+  MiddleLeft = averagedTOFreadings[3];
+  MiddleRight = averagedTOFreadings[4];
+  BottomLeft = averagedTOFreadings[5];
+  BottomRight = averagedTOFreadings[6];
+  BackInduction = !digitalRead(BackInductionPin);  
     switch (currentState) {
       case STARTING:
         // Take start readings, then set readyToDrive
-        if (TopLeft > (TopRight + 20)) {
+        if (TopLeft > (TopRight + 200)) {
           forward_left(motortime);
         } else {
           forward_right(motortime);
@@ -253,33 +257,33 @@ void Navigation() {
             break;
 
           case WEIGHT_DETECTED:
-            if(TopMiddle < 20) {
+            if(TopMiddle < 200) {
               full_reverse(5*motortime);
               if(TopLeft > TopRight){
                 full_turn_left(5*motortime);
               } else {
                 full_turn_right(5*motortime);
               }
-            } else if(TopLeft < 10) {
+            } else if(TopLeft < 100) {
               full_reverse(5*motortime);
               full_turn_left(3*motortime);
 
-            } else if(TopRight < 10) {
+            } else if(TopRight < 100) {
               full_reverse(5*motortime);
               full_turn_right(3*motortime);
             } else {
-              if(BottomLeft < 40 || BottomRight <40) {
-                if (BottomLeft > (BottomRight + 5)) {
+              if(BottomLeft < 400 || BottomRight <400) {
+                if (BottomLeft > (BottomRight + 50)) {
                   forward_right_right(3*motortime);
-                } else if (BottomRight > (BottomLeft + 5)) {
+                } else if (BottomRight > (BottomLeft + 50)) {
                   forward_left_left(3*motortime);
                 } else {
                   half_forward(motortime);
                 } 
               } else {
-              if (BottomLeft > (BottomRight + 5)) {
+              if (BottomLeft > (BottomRight + 50)) {
                 forward_right(3*motortime);
-              } else if (BottomRight > (BottomLeft + 5)) {
+              } else if (BottomRight > (BottomLeft + 50)) {
                 forward_left(3*motortime);
               } else {
                 half_forward(motortime);                
@@ -294,16 +298,16 @@ void Navigation() {
             
             if(NumWeightsCollected == 0) {
               half_forward(motortime);
-                if (BackInduction) {
-                stop(motortime);
+              if (BackInduction) {
+                stop_blocking(motortime);
                 go_down(stepper_motor_fast);
                 currentState = COLLECTING_WEIGHT;
                 }
             }else if(NumWeightsCollected > 0) {
-              stop(motortime);
+              stop_blocking(motortime);
               big_step_down(stepper_motor_fast);
               half_forward(10 * motortime);
-              stop(motortime);
+              stop_blocking(motortime);
               little_step_down(stepper_motor_fast);
               currentState = COLLECTING_WEIGHT;
             }
@@ -315,7 +319,7 @@ void Navigation() {
         if (NumWeightsCollected == 0) {
             turn_on_electromagnet(0);
             Serial.println("Electromagnet 0 activated");
-            stop(motortime);
+            stop_blocking(motortime);
             NumWeightsCollected++;
             go_up(stepper_motor_fast);
             weightState = WEIGHT_NOT_DETECTED;
@@ -323,7 +327,7 @@ void Navigation() {
 
         } else if (NumWeightsCollected == 1) {
             turn_on_electromagnet(1);
-            stop(motortime);
+            stop_blocking(motortime);
             Serial.println("Electromagnet 1 activated");
             NumWeightsCollected++;
             go_up(stepper_motor_fast);
@@ -333,7 +337,7 @@ void Navigation() {
         } else if (NumWeightsCollected == 2) {
             turn_on_electromagnet(2);
             Serial.println("Electromagnet 2 activated");
-            stop(motortime);           
+            stop_blocking(motortime);
             go_up(stepper_motor_fast);
             currentState = DRIVING;
             weightState = WEIGHT_NOT_DETECTED;
@@ -372,20 +376,5 @@ void Navigation() {
         currentState = STARTING;
     }
   }
-  
-//--------------------------------------------------------------------------------------------------------//
-//----------------------------------- Main Update Logic --------------------------------------------------//
-//--------------------------------------------------------------------------------------------------------//
 
-void UpdateAll() {
-  UpdateTOFReadings();
-  IMU();
-  UpdateWallState();
-  UpdateWeightState();
-  checkOrientation();
-  CheckForSensorUpdates();
-  Navigation();
-  PrintInformation();
-  PrintStates();
-}
 

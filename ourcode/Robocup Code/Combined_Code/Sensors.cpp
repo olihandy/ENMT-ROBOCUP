@@ -1,20 +1,28 @@
 #include "Sensors.h"
 #include "SensorBuffering.h"
 
-#define BUFFER_SIZE 5
+#define BUFFER_SIZE 3
 
-
-//TOF
+// TOF
 const int numReadings = 7;
 
-circBuf_t TOFbuffers[numReadings];
+// Define circular buffers for each TOF sensor
+circBuf_t TOFbuffer0;
+circBuf_t TOFbuffer1;
+circBuf_t TOFbuffer2;
+circBuf_t TOFbuffer3;
+circBuf_t TOFbuffer4;
+circBuf_t TOFbuffer5;
+circBuf_t TOFbuffer6;
+
+uint16_t averagedTOFreadings[numReadings];
 
 int elapsed_time = 0;
 unsigned long lastChangeTime = 0; // Timestamp of the last change
 const unsigned long timeoutDuration = 5000; // 2 seconds
 
-const int sensorErrorValue = 819;
 const int maxSensorValue = 115;
+const int SensorErrorValue = 819;
 
 // ELECTROMAGNET
 extern int FrontElectromagnetPin;
@@ -22,7 +30,7 @@ extern int MiddleElectromagnetPin;
 extern int BackElectromagnetPin;
 const int numElectroMagnets = 3;
 
-//Go Button
+// Go Button
 const int GoButtonPin = 23;
 
 // INDUCTION
@@ -47,8 +55,7 @@ SX1509 io;  // Create an SX1509 object to be used throughout
 VL53L1X sensorsL1[sensorCountL1];
 VL53L0X sensorsL0[sensorCountL0];
 
-
-//Color Sensor setup
+// Color Sensor setup
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
 const int ColorSensorPin = 41;
 uint16_t colorlist[4];
@@ -62,87 +69,90 @@ bool electromagnetStates[numElectroMagnets];
 bool inductionSensorStates[numInductiveSensors];
 
 void setupSensors() {
-    Serial.begin(9600);
-    Serial.print("Setup");
+  Serial.begin(9600);
+  Serial.print("Setup");
 
-    pinMode(GoButtonPin, INPUT);
+  pinMode(GoButtonPin, INPUT);
 
-    // ElectroMagnet
-    pinMode(FrontElectromagnetPin, OUTPUT);
-    pinMode(MiddleElectromagnetPin, OUTPUT);
-    pinMode(BackElectromagnetPin, OUTPUT);  
-    
-    // Induction sensor
-    pinMode(FrontInductionPin, INPUT);
-    pinMode(BackInductionPin, INPUT);
+  // ElectroMagnet
+  pinMode(FrontElectromagnetPin, OUTPUT);
+  pinMode(MiddleElectromagnetPin, OUTPUT);
+  pinMode(BackElectromagnetPin, OUTPUT);  
+  
+  // Induction sensor
+  pinMode(FrontInductionPin, INPUT);
+  pinMode(BackInductionPin, INPUT);
 
-    // TOF
-    if (!io.begin(SX1509_ADDRESS)) {
-        Serial.println("Failed to talk to IO Expander for TOFs");
-        while (1) {};
+  // TOF
+  if (!io.begin(SX1509_ADDRESS)) {
+    Serial.println("Failed to talk to IO Expander for TOFs");
+    while (1) {};
+  }
+  
+  // Initialize circular buffers for each TOF sensor
+  initCircBuf(&TOFbuffer0, BUFFER_SIZE);
+  initCircBuf(&TOFbuffer1, BUFFER_SIZE);
+  initCircBuf(&TOFbuffer2, BUFFER_SIZE);
+  initCircBuf(&TOFbuffer3, BUFFER_SIZE);
+  initCircBuf(&TOFbuffer4, BUFFER_SIZE);
+  initCircBuf(&TOFbuffer5, BUFFER_SIZE);
+  initCircBuf(&TOFbuffer6, BUFFER_SIZE);
+
+  Wire.begin();
+  Wire.setClock(400000);  // use 400 kHz I2C
+  Wire1.begin();
+  Wire1.setClock(400000);  // use 400 kHz I2C
+  Wire2.begin();
+
+  // Disable/reset all sensors by driving their XSHUT pins low.
+  for (uint8_t i = 0; i < sensorCountL1; i++) {
+    io.pinMode(xshutPinsL1[i], OUTPUT);
+    io.digitalWrite(xshutPinsL1[i], LOW);
+  }
+  for (uint8_t i = 0; i < sensorCountL1; i++) {
+    io.digitalWrite(xshutPinsL1[i], HIGH);
+    delay(10);
+    sensorsL1[i].setTimeout(500);
+    if (!sensorsL1[i].init()) {
+      Serial.print("Failed to detect and initialize sensor L1 ");
+      Serial.println(i);
+      while (1);
     }
-    
-    // Initialize circular buffers for each TOF sensor
-    for (int i = 0; i < numReadings; i++) {
-        initCircBuf(&TOFbuffers[i], BUFFER_SIZE);
+    sensorsL1[i].setAddress(VL53L1X_ADDRESS_START + i);
+    sensorsL1[i].startContinuous(50);
+  }
+
+  for (uint8_t i = 0; i < sensorCountL0; i++) {
+    io.pinMode(xshutPinsL0[i], OUTPUT);
+    io.digitalWrite(xshutPinsL0[i], LOW);
+  }
+  for (uint8_t i = 0; i < sensorCountL0; i++) {
+    io.digitalWrite(xshutPinsL0[i], HIGH);
+    delay(10);
+
+    sensorsL0[i].setTimeout(500);
+    if (!sensorsL0[i].init()) {
+      Serial.print("Failed to detect and initialize sensor L0 ");
+      Serial.println(i);
+      while (1);
     }
+    sensorsL0[i].setAddress(VL53L0X_ADDRESS_START + i);
+    sensorsL0[i].startContinuous(50);
+  }
 
-    Wire.begin();
-    Wire.setClock(400000);  // use 400 kHz I2C
-    Wire1.begin();
-    Wire1.setClock(400000);  // use 400 kHz I2C
-    Wire2.begin();
+  Serial.println("Configured TOFs");
 
-    // Disable/reset all sensors by driving their XSHUT pins low.
-    for (uint8_t i = 0; i < sensorCountL1; i++) {
-        io.pinMode(xshutPinsL1[i], OUTPUT);
-        io.digitalWrite(xshutPinsL1[i], LOW);
-    }
-    for (uint8_t i = 0; i < sensorCountL0; i++) {
-        io.pinMode(xshutPinsL0[i], OUTPUT);
-        io.digitalWrite(xshutPinsL0[i], LOW);
-    }
+  // Initialize color sensor
+  if (tcs.begin(ColorSensorPin, &Wire1)) {
+    Serial.println("Found sensor");
+  } else {
+    Serial.println("No TCS34725 found ... check your connections");
+    while (1); // halt!
+  }
 
-    for (uint8_t i = 0; i < sensorCountL0; i++) {
-        io.digitalWrite(xshutPinsL0[i], HIGH);
-        delay(10);
-
-        sensorsL0[i].setTimeout(500);
-        if (!sensorsL0[i].init()) {
-            Serial.print("Failed to detect and initialize sensor L0 ");
-            Serial.println(i);
-            while (1);
-        }
-        sensorsL0[i].setAddress(VL53L0X_ADDRESS_START + i);
-        sensorsL0[i].startContinuous(50);
-    }
-    for (uint8_t i = 0; i < sensorCountL1; i++) {
-        io.digitalWrite(xshutPinsL1[i], HIGH);
-        delay(10);
-        sensorsL1[i].setTimeout(500);
-        if (!sensorsL1[i].init()) {
-            Serial.print("Failed to detect and initialize sensor L1 ");
-            Serial.println(i);
-            while (1);
-        }
-        sensorsL1[i].setAddress(VL53L1X_ADDRESS_START + i);
-        sensorsL1[i].startContinuous(50);
-    }
-
-    Serial.println("Configured TOFs");
-
-    // Initialize color sensor
-    if (tcs.begin(ColorSensorPin, &Wire1)) {
-        Serial.println("Found sensor");
-    } else {
-        Serial.println("No TCS34725 found ... check your connections");
-        while (1); // halt!
-    }
-
-    // Take initial color reading and store as starting color
-    colorSensorDetect(colorlist);  // Read the initial color
-    colorStart();  // Save the starting color values
-
+  // Take initial color reading and store as starting color
+  colorSensorDetect(colorlist);  // Read the initial color
+  colorStart();  // Save the starting color values
 }
 
 void colorSensorDetect(uint16_t* returnlist) {
@@ -159,9 +169,7 @@ void colorSensorDetect(uint16_t* returnlist) {
   g = green; g /= sum;
   b = blue; b /= sum;
   r *= 256; g *= 256; b *= 256;
-  //Serial.print("\t\t"); //t is space
-  Serial.print((int)r); Serial.print("\t"); Serial.print((int)g); Serial.print("\t"); Serial.print((int)b); //Need to move these to modularized code
-  Serial.println();
+
   returnlist[0] = clear;
   returnlist[1] = red;
   returnlist[2] = green;
@@ -195,142 +203,85 @@ bool ColorCompareHome() {
       return false;  // One or more colors are out of tolerance
     }
   }
-
-  // All colors are within tolerance
-  Serial.println("All colors are within tolerance.");
   return true;
 }
 
+void GetTOF(void) {
 
+  // Update circular buffers
+  writeCircBuf(&TOFbuffer0, sensorsL1[0].read(false));
+  writeCircBuf(&TOFbuffer1, sensorsL1[1].read(false));
+  writeCircBuf(&TOFbuffer2, sensorsL1[2].read(false));
+  writeCircBuf(&TOFbuffer3, sensorsL0[0].readRangeContinuousMillimeters());
+  writeCircBuf(&TOFbuffer4, sensorsL0[1].readRangeContinuousMillimeters());
+  writeCircBuf(&TOFbuffer5, sensorsL0[2].readRangeContinuousMillimeters());
+  writeCircBuf(&TOFbuffer6, sensorsL0[3].readRangeContinuousMillimeters());
 
-void CheckAndPrintColorMatch() {
-    // Take a new color reading
-    colorSensorDetect(colorlist);
-
-    // Compare with the starting color and print the result
-    if (ColorCompareHome()) {
-        Serial.println("Color matches the starting color.");
-    } else {
-        Serial.println("Color does NOT match the starting color.");
-    }
+  // Calculate averaged values from circular buffers
+  averagedTOFreadings[0] = averageCircBuf(&TOFbuffer0);
+  averagedTOFreadings[1] = averageCircBuf(&TOFbuffer1);
+  averagedTOFreadings[2] = averageCircBuf(&TOFbuffer2);
+  averagedTOFreadings[3] = averageCircBuf(&TOFbuffer3);
+  averagedTOFreadings[4] = averageCircBuf(&TOFbuffer4);
+  averagedTOFreadings[5] = averageCircBuf(&TOFbuffer5);
+  averagedTOFreadings[6] = averageCircBuf(&TOFbuffer6);
 }
 
-uint16_t* GetTOF() {
-    // Read top sensors (L1)
-    TOFreadings[0] = sensorsL1[0].read() / 10; // Top Left
-    TOFreadings[1] = sensorsL1[1].read() / 10; // Top Middle
-    TOFreadings[2] = sensorsL1[2].read() / 10; // Top Right
-
-    // Read bottom sensors (L0)
-    TOFreadings[3] = sensorsL0[0].readRangeContinuousMillimeters() / 10; // Middle Left
-    TOFreadings[4] = sensorsL0[1].readRangeContinuousMillimeters() / 10; // Middle Right
-    TOFreadings[5] = sensorsL0[2].readRangeContinuousMillimeters() / 10; // Bottom Left
-    TOFreadings[6] = sensorsL0[3].readRangeContinuousMillimeters() / 10; // Bottom Right
-
-    // Replace any erroneous 819 values in the bottom 4 sensors (indices 3-6)
-    for (int i = 3; i < 7; i++) {
-        if (TOFreadings[i] == sensorErrorValue) {
-            TOFreadings[i] = maxSensorValue; // Set fallback value if 819 is found
-        }
-    }
-
-    return TOFreadings; // Return pointer to TOF readings
-}
-
-void UpdateTOFReadings() {
-    // Get TOF readings
-    uint16_t* readings = GetTOF();
-
-    // Write new readings into the circular buffers, skipping erroneous 819 values
-    for (int i = 0; i < numReadings; i++) {
-        if (readings[i] != sensorErrorValue) {  // Ignore readings of 819
-            writeCircBuf(&TOFbuffers[i], readings[i]);
-        }
-    }
-}
-
-// Function to calculate the average TOF reading from the circular buffer for a specific sensor index
-uint32_t GetAverageTOFReading(int sensorIndex) {
-    uint32_t sum = 0;
-    int count = 0;
-
-    // Loop through the buffer to calculate the sum and count valid readings
-    for (int i = 0; i < TOFbuffers[sensorIndex].size; i++) {
-        if (TOFbuffers[sensorIndex].data[i] != sensorErrorValue) { // Skip erroneous readings
-            sum += TOFbuffers[sensorIndex].data[i];
-            count++;
-        }
-    }
-
-    // Return average or maxSensorValue if no valid readings were found
-    return (count > 0) ? (sum / count) : maxSensorValue;
-}
-
-// Function to retrieve average readings for all TOF sensors
-uint16_t* GetAverageTOF() {
-    static uint16_t averageTOF[numReadings];
-
-    for (int i = 0; i < numReadings; i++) {
-        averageTOF[i] = GetAverageTOFReading(i);
-    }
-
-    return averageTOF; // Return pointer to average TOF readings
-}
-
-bool* GetElectroMagnet() {
+void GetElectroMagnet(void) {
     electromagnetStates[0] = digitalRead(FrontElectromagnetPin);
     electromagnetStates[1] = digitalRead(MiddleElectromagnetPin);
     electromagnetStates[2] = digitalRead(BackElectromagnetPin);
-    return electromagnetStates; // Return pointer to electromagnet states
 }
 
-bool* GetInduction() {
+void GetInduction(void) {
     inductionSensorStates[0] = !digitalRead(FrontInductionPin);
     inductionSensorStates[1] = !digitalRead(BackInductionPin);
-    return inductionSensorStates; // Return pointer to induction sensor states
 }
 
 void PrintInformation() {
     elapsed_time = millis() / 1000;
-    UpdateTOFReadings(); // Update TOF readings
+    GetTOF(); // Update TOF readings
     GetElectroMagnet(); // Update electromagnet states
     GetInduction(); // Update induction sensor states
-    CheckAndPrintColorMatch();
 
+    if (ColorCompareHome()) {
+      Serial.println("Color matches the starting color.");
+    } else {
+      Serial.println("Color does NOT match the starting color.");
+    }
     // Get average TOF readings
-    uint16_t* averageReadings = GetAverageTOF();
     Serial.print("Top  L ");
-    Serial.print(averageReadings[1]);
+    Serial.print(averagedTOFreadings[1]);
     if (sensorsL1[0].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
     Serial.print("\t");
 
     Serial.print("M ");
-    Serial.print(averageReadings[0]);
+    Serial.print(averagedTOFreadings[0]);
     if (sensorsL1[2].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
     Serial.print("\t");
 
     Serial.print("R ");
-    Serial.print(averageReadings[2]);
+    Serial.print(averagedTOFreadings[2]);
     if (sensorsL1[1].timeoutOccurred()) { Serial.print(" TIMEOUT L1"); }
     Serial.print("\t");
 
     Serial.print("Middle  R ");
-    Serial.print(averageReadings[4]);
+    Serial.print(averagedTOFreadings[4]);
     if (sensorsL0[0].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
     Serial.print("\t");
 
     Serial.print("L ");
-    Serial.print(averageReadings[3]);
+    Serial.print(averagedTOFreadings[3]);
     if (sensorsL0[1].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
     Serial.print("\t");
 
     Serial.print("Bottom  R ");
-    Serial.print(averageReadings[6]);
+    Serial.print(averagedTOFreadings[6]);
     if (sensorsL0[2].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
     Serial.print("\t");
 
     Serial.print("L ");
-    Serial.print(averageReadings[5]);
+    Serial.print(averagedTOFreadings[5]);
     if (sensorsL0[3].timeoutOccurred()) { Serial.print(" TIMEOUT L0"); }
     Serial.print("\t");
 

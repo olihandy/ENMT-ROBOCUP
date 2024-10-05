@@ -44,7 +44,7 @@ extern WeightDetectionState weightState;
 
 // Function prototypes
 extern void PrintStates(void);
-extern void UpdateWallState();
+extern void UpdateWallState(void);
 extern void UpdateWeightState(void);
 extern void UpdateAll(void);
 extern void Navigation(void);

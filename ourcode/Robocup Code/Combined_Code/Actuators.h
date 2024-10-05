@@ -15,10 +15,12 @@ extern int electromagnets_activated;
 
 // Function declarations
 void setupActuators();
+void nonBlockingMotorAction(unsigned long interval, int speedA, int speedB);
 void full_reverse(int timedelay);
 void reverse_left(int timedelay);
 void reverse_right(int timedelay);
 void stop(int timedelay);
+void stop_blocking(int timedelay);
 void full_forward(int timedelay);
 void half_forward(int timedelay);
 void full_turn_right(int timedelay);

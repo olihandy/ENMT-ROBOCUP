@@ -10,7 +10,6 @@ int quarter_reverse_speed = 1670;
 int half_reverse_speed = 1750;
 int full_reverse_speed = 1950;
 
-int timedelay = 100;
 
 int FrontElectromagnetPin = 14;
 int MiddleElectromagnetPin = 20;
@@ -48,81 +47,80 @@ void setupActuators() {
 //--------------------------------------------- Motors ---------------------------------------------------//
 //--------------------------------------------------------------------------------------------------------//
 
+unsigned long previousMillis = 0; // Stores the last time an action was performed
+unsigned long interval;       // Time to wait between steps
+
+
+void nonBlockingMotorAction(unsigned long interval, int speedA, int speedB) {
+  unsigned long currentMillis = millis(); // Get the current time
+
+  if (currentMillis - previousMillis >= interval) { // Check if the interval has passed
+    previousMillis = currentMillis; // Update the last action time
+    // Perform action based on current motor state
+    myservoA.writeMicroseconds(speedA);
+    myservoB.writeMicroseconds(speedB);
+  }
+}
+
 void full_reverse(int timedelay) {
-  myservoA.writeMicroseconds(full_reverse_speed);
-  myservoB.writeMicroseconds(full_reverse_speed);
-  delay(timedelay);
+  nonBlockingMotorAction(timedelay, full_reverse_speed, full_reverse_speed);
 }
 
 void reverse_left(int timedelay) {
-  myservoA.writeMicroseconds(half_reverse_speed);
-  myservoB.writeMicroseconds(full_reverse_speed);
-  delay(timedelay);
+  nonBlockingMotorAction(timedelay, half_reverse_speed, full_reverse_speed);
 }
 
 void reverse_right(int timedelay) {
-  myservoA.writeMicroseconds(full_reverse_speed);
-  myservoB.writeMicroseconds(half_reverse_speed);
-  delay(timedelay);
+  nonBlockingMotorAction(timedelay, full_reverse_speed, half_reverse_speed);
 }
 
 void stop(int timedelay) {
+  nonBlockingMotorAction(timedelay, stop_speed, stop_speed);
+}
+
+void stop_blocking(int timedelay) {
   myservoA.writeMicroseconds(stop_speed);
   myservoB.writeMicroseconds(stop_speed);
   delay(timedelay);
 }
 
 void full_forward(int timedelay) {
-  myservoA.writeMicroseconds(full_forward_speed);
-  myservoB.writeMicroseconds(full_forward_speed);
-  delay(timedelay);
+  nonBlockingMotorAction(timedelay, full_forward_speed, full_forward_speed);
 }
 
 void half_forward(int timedelay) {
-  myservoA.writeMicroseconds(half_forward_speed);
-  myservoB.writeMicroseconds(half_forward_speed);
-  delay(timedelay);
+  nonBlockingMotorAction(timedelay, half_forward_speed, half_forward_speed);
 }
 
 void full_turn_right(int timedelay) {
-  myservoA.writeMicroseconds(full_reverse_speed);
-  myservoB.writeMicroseconds(full_forward_speed);
-  delay(timedelay);
+  nonBlockingMotorAction(timedelay, full_reverse_speed, full_forward_speed);
 }
 
 void forward_right(int timedelay) {
-  myservoA.writeMicroseconds(half_forward_speed);
-  myservoB.writeMicroseconds(full_forward_speed);
-  delay(timedelay);
+  nonBlockingMotorAction(timedelay, half_forward_speed, full_forward_speed);
 }
 
 void forward_right_right(int timedelay) {
-  myservoA.writeMicroseconds(quarter_forward_speed);
-  myservoB.writeMicroseconds(full_forward_speed);
-  delay(timedelay);
+  nonBlockingMotorAction(timedelay, quarter_forward_speed, full_forward_speed);
 }
 
 void full_turn_left(int timedelay) {
-  myservoA.writeMicroseconds(full_forward_speed);
-  myservoB.writeMicroseconds(full_reverse_speed);
-  delay(timedelay);
+  nonBlockingMotorAction(timedelay, full_forward_speed, full_reverse_speed);
 }
 
 void forward_left(int timedelay) {
-  myservoA.writeMicroseconds(full_forward_speed);
-  myservoB.writeMicroseconds(half_forward_speed);
-  delay(timedelay);
+  nonBlockingMotorAction(timedelay, full_forward_speed, half_forward_speed);
 }
 
 void forward_left_left(int timedelay) {
-  myservoA.writeMicroseconds(full_forward_speed);
-  myservoB.writeMicroseconds(quarter_forward_speed);
-  delay(timedelay);
+  nonBlockingMotorAction(timedelay, full_forward_speed, quarter_forward_speed);
 }
 
 //--------------------------------------------------------------------------------------------------------//
 //----------------------------------------- Stepper Motors ------------------------------------------------//
 //--------------------------------------------------------------------------------------------------------//
+
+
 
 void go_down(int speed) {
   digitalWrite(MAdirpin, LOW);

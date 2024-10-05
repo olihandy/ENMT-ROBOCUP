@@ -1,7 +1,7 @@
 #ifndef SENSORS_H
 #define SENSORS_H
 
-#include <Wire.h>  
+#include <Wire.h>
 #include <VL53L1X.h>
 #include <VL53L0X.h>
 #include <SparkFunSX1509.h>
@@ -12,69 +12,64 @@
 #include "SensorBuffering.h"
 #include <Adafruit_TCS34725.h>
 
+// Global variables for time tracking
+extern int elapsed_time;                   // Time elapsed since start
+extern unsigned long lastChangeTime;       // Timestamp of the last change
+extern const unsigned long timeoutDuration; // Duration for timeouts (e.g., 5 seconds)
 
-extern int elapsed_time;
-extern unsigned long lastChangeTime; // Timestamp of the last change
-const extern unsigned long timeoutDuration; // 5 seconds
+extern uint16_t averagedTOFreadings[];
 
-//ELECTROMAGNET
+
+// Electromagnet pins and states
 extern int FrontElectromagnetPin;
 extern int MiddleElectromagnetPin;
 extern int BackElectromagnetPin;
 extern const int numElectroMagnets;
-extern bool electromagnetStates[];
+extern bool electromagnetStates[];         // State of electromagnets
 
+// Induction sensor pins and states
+extern const int FrontInductionPin; 
+extern const int BackInductionPin;
+extern const int numInductiveSensors;
+extern bool inductionSensorStates[];       // State of induction sensors
 
-//INDUCTION
-const extern int FrontInductionPin; 
-const extern int BackInductionPin;
-const extern int numInductiveSensors;
-extern bool inductionSensorStates[];
-
-//Go Button
-const extern int GoButtonPin;
-
+// Go Button pin
+extern const int GoButtonPin;              
 
 // TOF Sensor Configuration
-const extern  byte SX1509_ADDRESS;
-const extern int VL53L0X_ADDRESS_START;
-const extern int VL53L1X_ADDRESS_START;
+extern const byte SX1509_ADDRESS;          // I/O expander address
+extern const int VL53L0X_ADDRESS_START;    // Start address for VL53L0X sensors
+extern const int VL53L1X_ADDRESS_START;    // Start address for VL53L1X sensors
 
-//number of sensors in system.
-const extern byte SX1509_ADDRESS;
-const extern int VL53L0X_ADDRESS_START;
-const extern int VL53L1X_ADDRESS_START;
-const extern uint8_t sensorCountL1;
-const extern  uint8_t sensorCountL0;
-
+// Number of sensors in the system
+extern const uint8_t sensorCountL1;       // Count for L1 sensors
+extern const uint8_t sensorCountL0;       // Count for L0 sensors
 
 // SX1509 and TOF Sensors
-extern SX1509 io;
-extern VL53L1X sensorsL1[];
-extern VL53L0X sensorsL0[];
+extern SX1509 io;                          // I/O expander object
+extern VL53L1X sensorsL1[];                // Array for VL53L1X sensors
+extern VL53L0X sensorsL0[];                // Array for VL53L0X sensors
 
 // TOF Buffer Configuration
-const extern int numReadings;
-extern uint16_t TOFreadings[];
-extern circBuf_t TOFbuffers[];
+const extern int numReadings;              // Number of readings for TOF sensors
+extern uint16_t TOFreadings[];             // TOF readings array
+extern circBuf_t TOFbuffers[];             // Circular buffers for TOF readings
 
 // Color Sensor Variables
-extern Adafruit_TCS34725 tcs;
-extern uint16_t colorlist[4];
-extern uint16_t red_Start;
-extern uint16_t green_Start;
-extern uint16_t blue_Start;
-extern uint16_t clear_Start;
+extern Adafruit_TCS34725 tcs;              // Color sensor object
+extern uint16_t colorlist[4];              // List to hold color readings
+extern uint16_t red_Start;                 // Starting red value
+extern uint16_t green_Start;               // Starting green value
+extern uint16_t blue_Start;                // Starting blue value
+extern uint16_t clear_Start;               // Starting clear value
 
 // Function Prototypes
 void setupSensors();
-uint16_t* GetTOF();
-bool* GetElectroMagnet();
-bool* GetInduction();
+void GetTOF();
+void GetElectroMagnet();
+void GetInduction();
 void PrintInformation();
 void UpdateTOFReadings();
-uint32_t GetAverageTOFReading(int sensorIndex);
-uint16_t* GetAverageTOF();
 void colorSensorDetect(uint16_t* returnlist);
 void colorStart();
 bool ColorCompareHome();
