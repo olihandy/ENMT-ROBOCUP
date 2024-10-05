@@ -12,7 +12,7 @@ bool TimeToGo = false;
 bool homeReached = false;
 
 int LengthOfRobot = 35;
-int five_seconds = 5000;
+unsigned long five_seconds = 5000;
 int NOCHANGETHRESHOLD = 5;
 int timeWeightDetected;
 unsigned long lastOrientationChangeTime = 0;
@@ -68,7 +68,7 @@ void CheckForSensorUpdates() {
     lastChangeTime = currentTime;
   }
   // If no sensor changes detected for the timeout duration, perform reverse navigation
-  if (currentTime - lastChangeTime > timeoutDuration) {
+  if ((currentTime - lastChangeTime) > timeoutDuration) {
     Serial.println("No sensor change detected for timeout duration. Executing reverse navigation.");
     full_reverse(10 * motortime);    // Perform reverse
     full_turn_right(10 * motortime); // Perform turn
@@ -87,7 +87,7 @@ void checkOrientation(void) {
   }
 
   // If the robot has been facing the same direction for too long
-  if (millis() - lastOrientationChangeTime > five_seconds) {
+  if ((millis() - lastOrientationChangeTime) > five_seconds) {
     // Time to turn around
     full_turn_left(10*motortime);
     Serial.println("No direction change detected, turning");

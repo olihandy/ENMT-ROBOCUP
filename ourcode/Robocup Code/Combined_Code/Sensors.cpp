@@ -70,7 +70,6 @@ bool inductionSensorStates[numInductiveSensors];
 
 void setupSensors() {
   Serial.begin(9600);
-  Serial.print("Setup");
 
   pinMode(GoButtonPin, INPUT);
 
