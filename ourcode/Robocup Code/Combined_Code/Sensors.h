@@ -68,7 +68,7 @@ void setupSensors();
 uint16_t* GetTOF();
 bool* GetElectroMagnet();
 bool* GetInduction();
-void PrintInformation();
+void PrintInformation(double ori, double CurrentPosX, double CurrentPosY);
 void UpdateTOFReadings();
 uint32_t GetAverageTOFReading(int sensorIndex);
 uint16_t* GetAverageTOF();

@@ -1,6 +1,7 @@
 #include "Navigation.h"
 #include "Sensors.h"
 #include "IMU.h"
+#include "Actuators.h"
 
 //--------------------------------------------------------------------------------------------------------//
 //--------------------------------------- Shared Variables ------------------------------------------------//
@@ -147,247 +148,251 @@ void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t Midd
 //--------------------------------------------------------------------------------------------------------//
 
 void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_t MiddleLeft, uint32_t MiddleRight, uint32_t BottomLeft, uint32_t BottomRight, bool BackInduction) {
-    if ((millis()/1000) > 100) {
-      currentState = RETURNING_HOME;
-    }
-    switch (currentState) {
-       //This is here for when it is needed
-      case STARTING:
-        // Take start readings, then set readyToDrive
-        uint16_t clear_Start, red_Start, green_Start, blue_Start = colorStart();
-        double AverageAngX, StraightTotalTravelxperp, StraightTotalTravelypara = IMU();
-        Startangle = AverageAngX;
+  if ((millis()/1000) > 100) {
+    currentState = RETURNING_HOME;
+  }
+  Serial.print("In Navigation");
+  switch (currentState) {
+    Serial.println("In Switch");
+    case STARTING:
+      Serial.println("In Starting");
+      // Take start readings, then set readyToDrive
+      uint16_t clear_Start, red_Start, green_Start, blue_Start = colorStart();
+      double AverageAngX, StraightTotalTravelxperp, StraightTotalTravelypara = IMU();
+      Startangle = AverageAngX;
 
-        if (TopLeft > (TopRight + 20)) {
-          forward_left(motortime);
-        } else {
-          forward_right(motortime);
-        }
-        ReadyToDrive = true;
+      if (TopLeft > (TopRight + 20)) {
+        forward_left(motortime);
+      } else {
+        forward_right(motortime);
+      }
+      ReadyToDrive = true;
 
-        if (ReadyToDrive) {
-          currentState = DRIVING;
-        }
-        break;
+      if (ReadyToDrive) {
+        currentState = DRIVING;
+      }
+      break;
 
-      case DRIVING:
-        if(TopMiddle > 400) {
-          full_reverse(10*motortime);
-        }
-        switch (weightState) {
-          case WEIGHT_NOT_DETECTED:
-            switch (wallState) {
-              case WALL_AHEAD:
-                full_reverse(motortime);
-                break;
-              case SLIT_DETECTED:
-                full_forward(motortime);
-                break;
-              case LEFT_WALL_DETECTED:
-                proportional_forward_right(30, TopLeft);
-                break;
-              case SLAB_WALL_DETECTED:
-                full_reverse(5*motortime);
-                full_turn_left(5*motortime);
-                break;
-              case RIGHT_WALL_DETECTED:
-                proportional_forward_left(30, TopRight);
-                break;
-             case NO_WALL:
-             default:
-              if(TopMiddle < 300) {
-               if (TopLeft > TopRight + 20) {
-                  forward_left(motortime);
-                } else {
-                  forward_right(motortime);
-                }
-              } else {
-                full_turn_right(2*motortime);
-                half_forward(motortime);
-              }
+    case DRIVING:
+      Serial.println("In driving");
+      if(TopMiddle > 400) {
+        full_reverse(10*motortime);
+      }
+      switch (weightState) {
+        case WEIGHT_NOT_DETECTED:
+          switch (wallState) {
+            case WALL_AHEAD:
+              full_reverse(motortime);
               break;
-                }
-            break;
-
-          case WEIGHT_DETECTED:
-            if(TopMiddle < 20) {
-              if(TopLeft > TopRight){
-                full_turn_left(5*motortime);
-              } else {
-                full_turn_right(5*motortime);
-              }
-            } else if(TopLeft < 10) {
-              full_reverse(3*motortime);
-              forward_left(3*motortime);
-            } else if(TopRight < 10) {
-              full_reverse(3*motortime);
-              forward_right(3*motortime);
-            } else {
-              if (BottomLeft > (BottomRight + 5)) {
-                forward_right(motortime);
-              } else if (BottomRight > (BottomLeft + 5)) {
+            case SLIT_DETECTED:
+              full_forward(motortime);
+              break;
+            case LEFT_WALL_DETECTED:
+              proportional_forward_right(30, TopLeft);
+              break;
+            case SLAB_WALL_DETECTED:
+              full_reverse(5*motortime);
+              full_turn_left(5*motortime);
+              break;
+            case RIGHT_WALL_DETECTED:
+              proportional_forward_left(30, TopRight);
+              break;
+            case NO_WALL:
+            default:
+            if(TopMiddle < 300) {
+              if (TopLeft > TopRight + 20) {
                 forward_left(motortime);
               } else {
-                half_forward(motortime);
-              } 
-            }
-            break;
-          case WEIGHT_CONFIRMED:
-            if((millis() - timeWeightDetected) > timeoutDuration) {
-              weightState = WEIGHT_NOT_DETECTED;
-            }
-            
-            if(NumWeightsCollected == 0) {
+                forward_right(motortime);
+              }
+            } else {
+              full_turn_right(2*motortime);
               half_forward(motortime);
-                if (BackInduction) {
-                stop(motortime);
-                go_down(stepper_motor_fast);
-                currentState = COLLECTING_WEIGHT;
-                }
-            }else if(NumWeightsCollected > 0) {
-              stop(motortime);
-              big_step_down(stepper_motor_slow);
-              half_forward(10 * motortime);
-              stop(motortime);
-              little_step_down(stepper_motor_slow);
-              currentState = COLLECTING_WEIGHT;
             }
             break;
-        }
-        break;
+              }
+          break;
+
+        case WEIGHT_DETECTED:
+          if(TopMiddle < 20) {
+            if(TopLeft > TopRight){
+              full_turn_left(5*motortime);
+            } else {
+              full_turn_right(5*motortime);
+            }
+          } else if(TopLeft < 10) {
+            full_reverse(3*motortime);
+            forward_left(3*motortime);
+          } else if(TopRight < 10) {
+            full_reverse(3*motortime);
+            forward_right(3*motortime);
+          } else {
+            if (BottomLeft > (BottomRight + 5)) {
+              forward_right(motortime);
+            } else if (BottomRight > (BottomLeft + 5)) {
+              forward_left(motortime);
+            } else {
+              half_forward(motortime);
+            } 
+          }
+          break;
+        case WEIGHT_CONFIRMED:
+          if((millis() - timeWeightDetected) > timeoutDuration) {
+            weightState = WEIGHT_NOT_DETECTED;
+          }
+          
+          if(NumWeightsCollected == 0) {
+            half_forward(motortime);
+              if (BackInduction) {
+              stop(motortime);
+              go_down(stepper_motor_fast);
+              currentState = COLLECTING_WEIGHT;
+              }
+          }else if(NumWeightsCollected > 0) {
+            stop(motortime);
+            big_step_down(stepper_motor_slow);
+            half_forward(10 * motortime);
+            stop(motortime);
+            little_step_down(stepper_motor_slow);
+            currentState = COLLECTING_WEIGHT;
+          }
+          break;
+      }
+      break;
 
     case COLLECTING_WEIGHT:
-        if (NumWeightsCollected == 0) {
-            turn_on_electromagnet(0);
-            Serial.println("Electromagnet 0 activated");
-            stop(motortime);
-            NumWeightsCollected++;
-            go_up(stepper_motor_fast);
-            weightState = WEIGHT_NOT_DETECTED;
-            currentState = DRIVING;
+      if (NumWeightsCollected == 0) {
+          turn_on_electromagnet(0);
+          Serial.println("Electromagnet 0 activated");
+          stop(motortime);
+          NumWeightsCollected++;
+          go_up(stepper_motor_fast);
+          weightState = WEIGHT_NOT_DETECTED;
+          currentState = DRIVING;
 
-        } else if (NumWeightsCollected == 1) {
-            turn_on_electromagnet(1);
-            stop(motortime);
-            Serial.println("Electromagnet 1 activated");
-            NumWeightsCollected++;
-            go_up(stepper_motor_slow);
-            weightState = WEIGHT_NOT_DETECTED;            
-            currentState = DRIVING;
+      } else if (NumWeightsCollected == 1) {
+          turn_on_electromagnet(1);
+          stop(motortime);
+          Serial.println("Electromagnet 1 activated");
+          NumWeightsCollected++;
+          go_up(stepper_motor_slow);
+          weightState = WEIGHT_NOT_DETECTED;            
+          currentState = DRIVING;
 
-        } else if (NumWeightsCollected == 2) {
-            turn_on_electromagnet(2);
-            Serial.println("Electromagnet 2 activated");
-            stop(motortime);           
-            go_up(stepper_motor_slow);
-            currentState = DRIVING;
-            weightState = WEIGHT_NOT_DETECTED;
-            NumWeightsCollected++;
-            TimeToGo = true;
+      } else if (NumWeightsCollected == 2) {
+          turn_on_electromagnet(2);
+          Serial.println("Electromagnet 2 activated");
+          stop(motortime);           
+          go_up(stepper_motor_slow);
+          currentState = DRIVING;
+          weightState = WEIGHT_NOT_DETECTED;
+          NumWeightsCollected++;
+          TimeToGo = true;
+      }
+      
+      weightState = WEIGHT_NOT_DETECTED; // This will allow you to transition out of CONFIRMED
+      if (TimeToGo) {
+          currentState = RETURNING_HOME;
+      } else {
+          currentState = DRIVING;
+      }
+      break;
+
+    case RETURNING_HOME:
+      if (FoundWall == 0 && homeReached == 0) {
+        if (TopRight>20 && TopLeft>20) {
+          Serial.print("Moving Forward Home  ");
+          double AverageAngX, StraightTotalTravelxperp, StraightTotalTravelypara = IMU();
+          int homeangle_to_robot = int(atan2(StraightTotalTravelypara, StraightTotalTravelxperp) * 180 / PI); // Calculate angle to home
+          homeangle_to_robot += Startangle; // Adjust by initial angle (Startangle)
+
+          Serial.print(Startangle);
+          Serial.print("  ");
+          Serial.print(homeangle_to_robot);
+
+          // Adjust the home angle to point the robot toward home
+          int heading_home_angle = homeangle_to_robot - 180;
+
+          // Wrap the heading_home_angle to stay within 0-360 degrees
+          if (heading_home_angle < 0) {
+            heading_home_angle += 360;
+          } else if (heading_home_angle >= 360) {
+            heading_home_angle -= 360;
+          }
+
+          // Determine if we need to turn left, right, or move forward
+          int angle_diff = AverageAngX - heading_home_angle; // Calculate difference between current angle and target home heading
+
+          // Wrap angle_diff to handle circular nature of angles
+          if (angle_diff > 180) {
+            angle_diff -= 360; // Ensure it's within -180 to 180 range
+          } else if (angle_diff < -180) {
+            angle_diff += 360;
+          }
+
+          // Decision making: Turn left, right, or move forward based on the angle difference
+          if (angle_diff > 10) {
+            full_turn_left(motortime); // If too far right, turn left
+          } else if (angle_diff < -10) {
+            full_turn_right(motortime); // If too far left, turn right
+          } else {
+            full_forward(motortime); // If within the desired range, move forward
+          }
+        } else if (TopRight < 20 && TopMiddle<50) {
+          full_turn_left(motortime); //When at a wall
+        } else if (TopLeft < 20 && TopMiddle<50) {
+          full_turn_right(motortime);
         }
-        
-        weightState = WEIGHT_NOT_DETECTED; // This will allow you to transition out of CONFIRMED
-        if (TimeToGo) {
-            currentState = RETURNING_HOME;
+        if ((TopRight < 30) && (TopMiddle>50)){
+          FoundWall = 1; //If a right wall is found
+        } else if ((TopLeft < 30) && (TopMiddle>50)){
+          FoundWall = 2; //If a left wall is found
+        }
+      } else if (FoundWall == 1 && homeReached == 0) {
+        full_forward(motortime);
+        if (FoundWall == 1) {
+          if (TopRight > 30){
+            full_turn_right(motortime);
+          } else if (TopRight<5) {
+            full_turn_left(motortime);
+          }
         } else {
-            currentState = DRIVING;
-        }
-        break;
-
-      case RETURNING_HOME:
-        if (FoundWall == 0 && homeReached == 0) {
-          if (TopRight>20 && TopLeft>20) {
-            Serial.print("Moving Forward Home  ");
-            double AverageAngX, StraightTotalTravelxperp, StraightTotalTravelypara = IMU();
-            int homeangle_to_robot = int(atan2(StraightTotalTravelypara, StraightTotalTravelxperp) * 180 / PI); // Calculate angle to home
-            homeangle_to_robot += Startangle; // Adjust by initial angle (Startangle)
-
-            Serial.print(Startangle);
-            Serial.print("  ");
-            Serial.print(homeangle_to_robot);
-
-            // Adjust the home angle to point the robot toward home
-            int heading_home_angle = homeangle_to_robot - 180;
-
-            // Wrap the heading_home_angle to stay within 0-360 degrees
-            if (heading_home_angle < 0) {
-              heading_home_angle += 360;
-            } else if (heading_home_angle >= 360) {
-              heading_home_angle -= 360;
-            }
-
-            // Determine if we need to turn left, right, or move forward
-            int angle_diff = AverageAngX - heading_home_angle; // Calculate difference between current angle and target home heading
-
-            // Wrap angle_diff to handle circular nature of angles
-            if (angle_diff > 180) {
-              angle_diff -= 360; // Ensure it's within -180 to 180 range
-            } else if (angle_diff < -180) {
-              angle_diff += 360;
-            }
-
-            // Decision making: Turn left, right, or move forward based on the angle difference
-            if (angle_diff > 10) {
-              full_turn_left(motortime); // If too far right, turn left
-            } else if (angle_diff < -10) {
-              full_turn_right(motortime); // If too far left, turn right
-            } else {
-              full_forward(motortime); // If within the desired range, move forward
-            }
-          } else if (TopRight < 20 && TopMiddle<50) {
-            full_turn_left(motortime); //When at a wall
-          } else if (TopLeft < 20 && TopMiddle<50) {
+          if (TopLeft > 30){
+            full_turn_left(motortime);
+          } else if (TopLeft<5) {
             full_turn_right(motortime);
           }
-          if ((TopRight < 30) && (TopMiddle>50)){
-            FoundWall = 1; //If a right wall is found
-          } else if ((TopLeft < 30) && (TopMiddle>50)){
-            FoundWall = 2; //If a left wall is found
-          }
-        } else if (FoundWall == 1 && homeReached == 0) {
-          full_forward(motortime);
-          if (FoundWall == 1) {
-            if (TopRight > 30){
-              full_turn_right(motortime);
-            } else if (TopRight<5) {
-              full_turn_left(motortime);
-            }
-          } else {
-            if (TopLeft > 30){
-              full_turn_left(motortime);
-            } else if (TopLeft<5) {
-              full_turn_right(motortime);
-            }
-          }
         }
-        bool homeReached = ColorCompareHome();
-        if (homeReached) {
-          stop(motortime);
-          go_down(stepper_motor_slow);
-          turn_off_electromagnet(0);
-          turn_off_electromagnet(1);
-          turn_off_electromagnet(2);
-          stop(motortime);
-          go_up(stepper_motor_fast);
-          NumWeightsCollected = 0;
-          currentState = FINISHED;
-        }
-        break;
-
-      case FINISHED:
+      }
+      bool homeReached = ColorCompareHome();
+      if (homeReached) {
         stop(motortime);
-        delay(100);
-        homeReached = 0;
-        currentState = STARTING;
-    }
+        go_down(stepper_motor_slow);
+        turn_off_electromagnet(0);
+        turn_off_electromagnet(1);
+        turn_off_electromagnet(2);
+        stop(motortime);
+        go_up(stepper_motor_fast);
+        NumWeightsCollected = 0;
+        currentState = FINISHED;
+      }
+      break;
+
+    case FINISHED:
+      stop(motortime);
+      delay(100);
+      homeReached = 0;
+      currentState = STARTING;
   }
-  
+}
+ 
 //--------------------------------------------------------------------------------------------------------//
 //----------------------------------- Main Update Logic --------------------------------------------------//
 //--------------------------------------------------------------------------------------------------------//
 
 void UpdateAll() {
   UpdateTOFReadings();
+  double ori, CurrentPosX, CurrentPosY = IMU();
   bool* electromagnetState = GetElectroMagnet();
   bool* inductionSensorState = GetInduction();
 
@@ -406,13 +411,14 @@ void UpdateAll() {
     full_reverse(10 * motortime);
     full_turn_right(10 * motortime);
   } else {
+    Serial.println("In Navigation");
     Navigation(GetAverageTOFReading(0), GetAverageTOFReading(1), GetAverageTOFReading(2),
                GetAverageTOFReading(3), GetAverageTOFReading(4), GetAverageTOFReading(5),
                GetAverageTOFReading(6), inductionSensorState[1]);
   }
 
   // Print debugging information
-  PrintInformation();
+  PrintInformation(ori, CurrentPosX, CurrentPosY);
   PrintStates();
 }
 

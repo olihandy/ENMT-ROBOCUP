@@ -286,7 +286,7 @@ bool* GetInduction() {
     return inductionSensorStates; // Return pointer to induction sensor states
 }
 
-void PrintInformation() {
+void PrintInformation(double ori, double CurrentPosX, double CurrentPosY) {
     elapsed_time = millis() / 1000;
     UpdateTOFReadings(); // Update TOF readings
     GetElectroMagnet(); // Update electromagnet states
@@ -345,4 +345,8 @@ void PrintInformation() {
 
     Serial.print(elapsed_time);
     Serial.print("\t");
+
+    Serial.println("Positions:");
+    Serial.println(CurrentPosX); 
+    Serial.println(CurrentPosY);
 }

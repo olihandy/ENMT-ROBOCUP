@@ -49,13 +49,13 @@ void setup_IMU(void) {
 void printEvent(sensors_event_t* event) { //problems getting right event
   int x_ori = -1000000, x_acc = -1000000, y_acc = -1000000;
   if (event->type == SENSOR_TYPE_ORIENTATION) {
-    Serial.print("Orient:");
+    //Serial.print("Orient:");
     x_ori = event->orientation.x;
 
     ori = x_ori;
 
   } else if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
-    Serial.print("Linear:");
+    //Serial.print("Linear:");
     x_acc = event->acceleration.x;
     y_acc = event->acceleration.y;
 
@@ -140,8 +140,8 @@ double IMU(void) {
   MovingAverageFilter();        // Apply moving average filter
   
    // Update previous time
-  Serial.println("");
-  Serial.println(millis()-PreviousTime);
+  //Serial.println("");
+  //Serial.println(millis()-PreviousTime);
   timeDifference = (millis() - PreviousTime); // Calculate time difference in seconds  
   PreviousTime = millis();
   
@@ -157,19 +157,19 @@ double IMU(void) {
   // Serial.println(pow(0.5*timeDifference, 2));
   // Serial.println("");
   CurrentPosX += (AverageAccelerationX * 0.5 * pow(timeDifference, 2)); // Update X position
-  // Serial.print("X Position: ");
-  // Serial.println(CurrentPosX, 5); 
+  Serial.print("X Position: ");
+  Serial.println(CurrentPosX, 5); 
   // Serial.println(acc[0]);
   // Serial.println(AverageAccelerationX, 5);
 
   CurrentPosY += (AverageAccelerationY * 0.5 * pow(timeDifference, 2)); // Update Y position
-  // Serial.print("Y Position: ");
-  // Serial.println(CurrentPosY);
+  Serial.print("Y Position: ");
+  Serial.println(CurrentPosY);
   // Serial.println(acc[1]);
   // Serial.println(AverageAccelerationY);
 
-  // Serial.print("Orientation X: ");
-  // Serial.println(ori);
+  Serial.print("Orientation X: ");
+  Serial.println(ori);
   
   Serial.println("-----------------------------------------------------------------------");
 

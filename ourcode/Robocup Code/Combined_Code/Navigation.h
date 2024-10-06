@@ -2,7 +2,6 @@
 #define NAVIGATION_H
 
 #include "Sensors.h" 
-#include "Actuators.h"
 
 // Boolean flags for robot state
 extern bool ReadyToDrive;
