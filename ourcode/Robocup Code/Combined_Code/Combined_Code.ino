@@ -158,6 +158,8 @@ void pin_init();
 void task_init();
 void stopAllActions();
 
+void competition_init();
+
 //**********************************************************************************
 // put your setup code here, to run once:
 //**********************************************************************************
@@ -261,13 +263,25 @@ void task_init() {
 }
 
 
+void competition_init() {
+  tPrint_information.disable();
+  tPrint_states.disable();
+  }
+
 
 //**********************************************************************************
 // put your main code here, to run repeatedly
 //**********************************************************************************
 void loop() {
-  unsigned long collectionStartTime = 0;  // Time when the current collection started
-  const unsigned long collectionDelay = 5000;  // 5-second delay between state transitions
+  static unsigned long collectionStartTime = 0;  // Time when the current collection started
+  const unsigned long collectionDelay = 100;  // 5-second delay between state transitions
+  static bool firstCollection = true;  // Track if it's the first collection to start the timer
+
+  int start_time = millis();
+  checkOrientation();
+  int end_time = millis();
+  Serial.println(end_time-start_time);
+
   if (runProgram) {
     int currentTime = millis() / 1000;
     if (currentTime > 100) {
@@ -276,14 +290,12 @@ void loop() {
 
     switch (currentState) {
       case STARTING:
-        // Perform initial navigation actions
+        // Initialize navigation actions and disable unnecessary tasks
         tReturn_home.disable();
         tCollect_weight_1.disable();
         tCollect_weight_2.disable();
         tCollect_weight_3.disable();
-        
         tNavigation.enable();
-        
 
         ReadyToDrive = true;
         if (ReadyToDrive) {
@@ -292,13 +304,6 @@ void loop() {
         break;
 
       case DRIVING:
-        tNavigation.enable();
-        tRead_TOF.enable();
-        tUpdate_wall_state.enable();
-        tUpdate_weight_state.enable();
-        tCheck_sensor_updates.enable();
-
-        // Call navigation-related actions
         if (TimeToGo) {
           currentState = RETURNING_HOME;
         }
@@ -308,75 +313,81 @@ void loop() {
         break;
 
       case COLLECTING_WEIGHT:
-        tNavigation.disable();
-        tUpdate_wall_state.disable();
-        tUpdate_weight_state.disable();
-        tCollect_weight_1.disable();
-        tCollect_weight_2.disable();
-        tCollect_weight_3.disable();
 
-        // Check if enough time has passed since the last collection
-        if (millis() - collectionStartTime >= collectionDelay) {
+        // Check if enough time has passed since the last collection or for the first collection
+        if (firstCollection || millis() - collectionStartTime >= collectionDelay) {
+          firstCollection = false;  // Reset the first collection flag
 
           // Enable the appropriate collection task based on the collectionState
           switch (collectionState) {
             case ZERO:
-              tCollect_weight_1.enable(); // Enable task to collect first weight
+              if(NumWeightsCollected == 0) {
+                tCollect_weight_1.enable(); // Enable task to collect the second weight
+              } else {
+                tCollect_weight_1.disable();
+                break;
+              }
               break;
-
             case ONE:
-              tCollect_weight_2.enable(); // Enable task to collect second weight
+              if(NumWeightsCollected == 1) {
+                tCollect_weight_2.enable(); // Enable task to collect the second weight
+              } else {
+                tCollect_weight_2.disable();
+                break;
+              }
               break;
-
             case TWO:
-              tCollect_weight_3.enable(); // Enable task to collect third weight
+              if(NumWeightsCollected == 2) {
+                tCollect_weight_3.enable(); // Enable task to collect the second weight
+              } else {
+                tCollect_weight_3.disable();
+                currentState = RETURNING_HOME; // Move to returning home after collecting all weight
+                break;
+              }
               break;
-
             case THREE:
               currentState = RETURNING_HOME; // Move to returning home after collecting all weights
               break;
           }
-          Serial.println(collectionState);
-          Serial.println(NumWeightsCollected);
-          // Check if a weight was collected
+
+          // After each weight collection, check if a weight was collected
           if (NumWeightsCollected > static_cast<int>(collectionState)) {
             // Move to the next collection state only if a weight has been successfully collected
             if (collectionState < THREE) {
               collectionState = static_cast<WeightsCollectedState>(collectionState + 1);
               collectionStartTime = millis(); // Reset the timer after collecting a weight
             }
-          Serial.print(electromagnetStates[0]);         // State of electromagnets
-          if(!digitalRead(BackElectromagnetPin)) {
-            NumWeightsCollected = 1;
-          }
 
-            // Set currentState back to DRIVING after the weight is collected
-           collect_weight = false;
+            // Reset flags and return to driving state after weight is collected
+            collect_weight = false;
             currentState = DRIVING;
           }
         }
-
         break;
 
       case RETURNING_HOME:
-        Serial.print("HOMETIME");
+        // Disable all navigation and weight collection tasks
         tNavigation.disable();
         tUpdate_wall_state.disable();
         tUpdate_weight_state.disable();
-        tReturn_home.enable();
+        tReturn_home.enable();  // Enable return home task
 
+        // Once home is reached, finish the process
         if (homeReached) {
           currentState = FINISHED;
         }
         break;
 
       case FINISHED:
+        // Stop all actions
         stopAllActions();
         break;
     }
+
+    // Execute the task manager
     taskManager.execute();
   } else {
-    // Disable tasks when the program is not running
+    // If the program is not running, stop and reset variables
     stop(10);
     NumWeightsCollected = 0;
     tNavigation.disable();

@@ -23,7 +23,7 @@ int teeny_step = 1000;
 
 int stepper_motor_fast = 20;
 int stepper_motor_slow = 40;
-int motortime = 100;
+int motortime = 10;
 
 int MAdirpin = 32;
 int MAsteppin = 33;
@@ -75,6 +75,12 @@ void full_reverse(int timedelay) {
   nonBlockingMotorAction(timedelay, full_reverse_speed, full_reverse_speed);
 }
 
+void full_reverse_blocking(int timedelay) {
+  myservoA.writeMicroseconds(full_reverse_speed);
+  myservoB.writeMicroseconds(full_reverse_speed);
+  delay(timedelay);  
+}
+
 void reverse_left(int timedelay) {
   nonBlockingMotorAction(timedelay, half_reverse_speed, full_reverse_speed);
 }
@@ -121,6 +127,12 @@ void forward_right_right(int timedelay) {
 
 void full_turn_left(int timedelay) {
   nonBlockingMotorAction(timedelay, full_forward_speed, full_reverse_speed);
+}
+
+void full_turn_left_blocking(int timedelay) {
+  myservoA.writeMicroseconds(full_forward_speed);
+  myservoB.writeMicroseconds(full_reverse_speed);
+  delay(timedelay);  
 }
 
 void forward_left(int timedelay) {

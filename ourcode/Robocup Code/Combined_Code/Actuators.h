@@ -21,6 +21,7 @@ extern int electromagnets_activated;
 void setupActuators(void);
 void nonBlockingMotorAction(unsigned long interval, int speedA, int speedB);
 void full_reverse(int timedelay);
+void full_reverse_blocking(int timedelay);
 void reverse_left(int timedelay);
 void reverse_right(int timedelay);
 void stop(int timedelay);
@@ -33,6 +34,7 @@ void forward_right(int timedelay);
 void forward_right_right(int timedelay);
 
 void full_turn_left(int timedelay);
+void full_turn_left_blocking(int timedelay);
 void forward_left(int timedelay);
 void forward_left_left(int timedelay);
 

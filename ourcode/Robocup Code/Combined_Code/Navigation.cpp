@@ -8,10 +8,10 @@
 
 bool ReadyToDrive = false;
 bool WeightDetected = false;
-int NumWeightsCollected = 0;
 bool TimeToGo = false;
 bool homeReached = false;
 bool collect_weight = false;
+extern int NumWeightsCollected;
 
 extern bool finished_collecting;
 int LengthOfRobot = 35;
@@ -77,8 +77,8 @@ void CheckForSensorUpdates() {
   // If no sensor changes detected for the timeout duration, perform reverse navigation
   if ((currentTime - lastChangeTime) > timeoutDuration) {
     Serial.println("No sensor change detected for timeout duration. Executing reverse navigation.");
-    full_reverse(10 * motortime);    // Perform reverse
-    full_turn_right(10 * motortime); // Perform turn
+    full_reverse_blocking(10 * motortime);    // Perform reverse
+    full_turn_left_blocking(100 * motortime); // Perform turn
   }
 }
 
@@ -86,10 +86,11 @@ void CheckForSensorUpdates() {
 
 void checkOrientation(void) {
   yaw = ori[0];
-  pitch =ori[2];
+  pitch = ori[2];
 
-  if(abs(yaw) > 5) {
-    full_reverse(motortime);
+  if(abs(pitch) > 5) {
+    full_reverse_blocking(motortime);
+    Serial.print("REVERSING");
   }
 
   // Check if the orientation has changed significantly (beyond a small tolerance)
@@ -102,7 +103,7 @@ void checkOrientation(void) {
   // If the robot has been facing the same direction for too long
   if ((millis() - lastOrientationChangeTime) > five_seconds) {
     // Time to turn around
-    full_turn_left(10*motortime);
+    full_turn_left_blocking(10*motortime);
     Serial.println("No direction change detected, turning");
     
     // After turning, reset the timer and the orientation
@@ -111,42 +112,6 @@ void checkOrientation(void) {
   }
 }
 
-void PrintStates(void) {
-  // Print out all states for debugging
-  Serial.print("ReadyToDrive: ");
-  Serial.println(ReadyToDrive ? "True" : "False");
-
-  Serial.print("WeightDetected: ");
-  Serial.println(WeightDetected ? "True" : "False");
-
-  Serial.print("WeightsCollected: ");
-  Serial.println(NumWeightsCollected);
-
-  Serial.print("TimeToGo: ");
-  Serial.println(TimeToGo ? "True" : "False");
-
-  Serial.print("HomeReached: ");
-  Serial.println(homeReached ? "True" : "False");
-
-  Serial.print("WallState: ");
-  switch (wallState) {
-    case NO_WALL: Serial.println("NO_WALL"); break;
-    case WALL_AHEAD: Serial.println("WALL_AHEAD"); break;
-    case SLIT_DETECTED: Serial.println("SLIT_DETECTED"); break;
-    case LEFT_WALL_DETECTED: Serial.println("LEFT_WALL_DETECTED"); break;
-    case SLAB_WALL_DETECTED: Serial.println("SLAB_WALL_DETECTED"); break;
-    case RIGHT_WALL_DETECTED: Serial.println("RIGHT_WALL_DETECTED"); break;
-  }
-
-  Serial.print("WeightState: ");
-  switch (weightState) {
-    case WEIGHT_NOT_DETECTED: Serial.println("WEIGHT_NOT_DETECTED"); break;
-    case WEIGHT_DETECTED: Serial.println("WEIGHT_DETECTED"); break;
-    case WEIGHT_CONFIRMED: Serial.println("WEIGHT_CONFIRMED"); break;
-  }
-
-  Serial.println("----------------------");
-}
 
 //--------------------------------------------------------------------------------------------------------//
 //----------------------------------- Wall and Weight State Updates --------------------------------------//
@@ -286,8 +251,47 @@ void Navigation(void) {
 
     case WEIGHT_CONFIRMED:
       collect_weight = true;
+      weightState = WEIGHT_NOT_DETECTED;
       break;
   }
 
 }
 
+
+
+void PrintStates(void) {
+  // Print out all states for debugging
+  Serial.print("ReadyToDrive: ");
+  Serial.println(ReadyToDrive ? "True" : "False");
+
+  Serial.print("WeightDetected: ");
+  Serial.println(WeightDetected ? "True" : "False");
+
+  Serial.print("WeightsCollected: ");
+  Serial.println(NumWeightsCollected);
+
+  Serial.print("TimeToGo: ");
+  Serial.println(TimeToGo ? "True" : "False");
+
+  Serial.print("HomeReached: ");
+  Serial.println(homeReached ? "True" : "False");
+
+  Serial.print("WallState: ");
+  switch (wallState) {
+    case NO_WALL: Serial.println("NO_WALL"); break;
+    case WALL_AHEAD: Serial.println("WALL_AHEAD"); break;
+    case SLIT_DETECTED: Serial.println("SLIT_DETECTED"); break;
+    case LEFT_WALL_DETECTED: Serial.println("LEFT_WALL_DETECTED"); break;
+    case SLAB_WALL_DETECTED: Serial.println("SLAB_WALL_DETECTED"); break;
+    case RIGHT_WALL_DETECTED: Serial.println("RIGHT_WALL_DETECTED"); break;
+  }
+
+  Serial.print("WeightState: ");
+  switch (weightState) {
+    case WEIGHT_NOT_DETECTED: Serial.println("WEIGHT_NOT_DETECTED"); break;
+    case WEIGHT_DETECTED: Serial.println("WEIGHT_DETECTED"); break;
+    case WEIGHT_CONFIRMED: Serial.println("WEIGHT_CONFIRMED"); break;
+  }
+
+  Serial.println("----------------------");
+}
