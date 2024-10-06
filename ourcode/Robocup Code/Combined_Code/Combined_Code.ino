@@ -30,8 +30,30 @@
 #include "Navigation.h"
 #include "Sensors.h"
 #include "SensorBuffering.h"
+#include "WeightCollection.h"
+#include "ReturningHome.h"
 
 bool runProgram = false;
+extern bool ReadyToDrive;
+extern bool WeightDetected;
+extern int NumWeightsCollected;
+extern bool TimeToGo;
+extern bool homeReached;
+extern bool collect_weight;
+extern volatile bool finished_collecting;
+
+// Robot state enumeration
+enum RobotState {
+  STARTING,          // 0 = Starting
+  DRIVING,           // 1 = Driving
+  COLLECTING_WEIGHT, // 2 = Collecting Weight
+  RETURNING_HOME,    // 3 = Returning Home
+  FINISHED           // 4 = Finished
+};
+
+// Declare the current robot state
+RobotState currentState = STARTING;
+
 
 //**********************************************************************************
 // Local Definitions
@@ -54,6 +76,10 @@ bool runProgram = false;
 #define PRINT_IMU_TASK_PERIOD               500       //Takes 0ms?
 #define PRINT_INFORMATION_TASK_PERIOD       500     //Takes 130 ms
 #define PRINT_STATES_TASK_PERIOD            500     //Takes 0 ms? 
+#define COLLECT_WEIGHT_1_TASK_PERIOD        100
+#define COLLECT_WEIGHT_2_TASK_PERIOD        100
+#define COLLECT_WEIGHT_3_TASK_PERIOD        100
+#define RETURN_HOME_TASK_PERIOD             1000
 
 // Task execution amount definitions
 // -1 means indefinitely
@@ -69,6 +95,11 @@ bool runProgram = false;
 #define PRINT_IMU_NUM_EXECUTE                  -1
 #define PRINT_INFORMATION_TASK_NUM_EXECUTE     -1
 #define PRINT_STATES_TASK_NUM_EXECUTE          -1
+#define COLLECT_WEIGHT_1_NUM_EXECUTE           -1
+#define COLLECT_WEIGHT_2_NUM_EXECUTE           -1
+#define COLLECT_WEIGHT_3_NUM_EXECUTE           -1
+#define RETURN_HOME_NUM_EXECUTE                -1
+
 
 
 // Pin deffinitions
@@ -94,14 +125,19 @@ Task tRead_TOF(TOF_READ_TASK_PERIOD,                              TOF_READ_TASK_
 Task tRead_electromagnet(READ_ELECTROMAGNET_TASK_PERIOD,          READ_ELECTROMAGNET_NUM_EXECUTE,           &GetElectroMagnet);
 Task tRead_inductive(READ_INDUCTIVE_TASK_PERIOD,                  READ_INDUCTIVE_NUM_EXECUTE,               &GetInduction);
 Task tIMU_update(IMU_UPDATE_TASK_PERIOD,                          IMU_UPDATE_TASK_NUM_EXECUTE,              &IMU);
-Task tUpdate_wall_state(WALL_UPDATE_TASK_PERIOD,                  WALL_UPDATE_TASK_NUM_EXECUTE,             &UpdateWallState); // Added missing period and execution parameters
-Task tUpdate_weight_state(WEIGHT_UPDATE_TASK_PERIOD,              WEIGHT_UPDATE_TASK_NUM_EXECUTE,           &UpdateWeightState); // Added missing period and execution parameters
+Task tUpdate_wall_state(WALL_UPDATE_TASK_PERIOD,                  WALL_UPDATE_TASK_NUM_EXECUTE,             &UpdateWallState);
+Task tUpdate_weight_state(WEIGHT_UPDATE_TASK_PERIOD,              WEIGHT_UPDATE_TASK_NUM_EXECUTE,           &UpdateWeightState);
 Task tCheck_orientation(CHECK_ORIENTATION_TASK_PERIOD,            CHECK_ORIENTATION_TASK_NUM_EXECUTE,       &checkOrientation);
 Task tCheck_sensor_updates(CHECK_SENSOR_UPDATES_TASK_PERIOD,      CHECK_SENSOR_UPDATES_TASK_NUM_EXECUTE,    &CheckForSensorUpdates);
 Task tNavigation(NAVIGATION_TASK_PERIOD,                          NAVIGATION_TASK_NUM_EXECUTE,              &Navigation);
 Task tIMU_print(PRINT_IMU_TASK_PERIOD,                            PRINT_IMU_NUM_EXECUTE,                    &IMU_print);
 Task tPrint_information(PRINT_INFORMATION_TASK_PERIOD,            PRINT_INFORMATION_TASK_NUM_EXECUTE,       &PrintInformation);
 Task tPrint_states(PRINT_STATES_TASK_PERIOD,                      PRINT_STATES_TASK_NUM_EXECUTE,            &PrintStates);
+Task tCollect_weight_1(COLLECT_WEIGHT_1_TASK_PERIOD,              COLLECT_WEIGHT_1_NUM_EXECUTE,             &CollectWeight_1);
+Task tCollect_weight_2(COLLECT_WEIGHT_2_TASK_PERIOD,              COLLECT_WEIGHT_2_NUM_EXECUTE,             &CollectWeight_2);
+Task tCollect_weight_3(COLLECT_WEIGHT_3_TASK_PERIOD,              COLLECT_WEIGHT_3_NUM_EXECUTE,             &CollectWeight_3);
+Task tReturn_home(RETURN_HOME_TASK_PERIOD,                        RETURN_HOME_NUM_EXECUTE,                  &return_home);
+
 
 
 Scheduler taskManager;
@@ -150,6 +186,24 @@ void int_init() {
   attachInterrupt(digitalPinToInterrupt(STARTBUT), toggle_prog_ISR, FALLING);
 }
 
+void stopAllActions() {
+  tRead_TOF.disable();
+  tRead_electromagnet.disable();
+  tRead_inductive.disable();
+  tIMU_update.disable();
+  tUpdate_wall_state.disable();
+  tUpdate_weight_state.disable();
+  tCheck_orientation.disable();
+  tCheck_sensor_updates.disable();
+  tNavigation.disable();
+  tIMU_print.disable();
+  tPrint_information.disable();
+  tPrint_states.disable();
+  tCollect_weight_1.disable();
+  tCollect_weight_2.disable();
+  tCollect_weight_3.disable();
+  tReturn_home.disable();
+}
 
 
 //**********************************************************************************
@@ -172,6 +226,10 @@ void task_init() {
   taskManager.addTask(tIMU_print);
   taskManager.addTask(tPrint_information);
   taskManager.addTask(tPrint_states);
+  taskManager.addTask(tCollect_weight_1);
+  taskManager.addTask(tCollect_weight_2);
+  taskManager.addTask(tCollect_weight_3);
+  taskManager.addTask(tReturn_home);
 
   // Enable the tasks
   tRead_TOF.enable();
@@ -186,6 +244,10 @@ void task_init() {
   tIMU_print.enable();
   tPrint_information.enable();
   tPrint_states.enable();
+  tCollect_weight_1.enable();
+  tCollect_weight_2.enable();
+  tCollect_weight_3.enable();
+  tReturn_home.enable();
 
   Serial.println("Tasks have been initialised \n");
 }
@@ -196,19 +258,105 @@ void task_init() {
 // put your main code here, to run repeatedly
 //**********************************************************************************
 void loop() {
+  if (runProgram) {
+    int currentTime = millis() / 1000;
+    if (currentTime > 100) {
+      TimeToGo = true;
+    }
 
-  if(runProgram) {
-    tNavigation.enable();
-    tCheck_orientation.enable();
-    tCheck_sensor_updates.enable();
-    taskManager.execute();    //execute the scheduler
+    switch (currentState) {
+      case STARTING:
+        // Perform initial navigation actions
+        tReturn_home.disable();
+        tCollect_weight_1.disable();
+        tCollect_weight_2.disable();
+        tCollect_weight_3.disable();
+        
+        tNavigation.enable();
+        
 
+        Serial.println("Starting Navigation...");
+        ReadyToDrive = true;
+        if (ReadyToDrive) {
+          currentState = DRIVING;
+        }
+        break;
+
+      case DRIVING:
+        tNavigation.enable();
+        tRead_TOF.enable();
+        tUpdate_wall_state.enable();
+        tUpdate_weight_state.enable();
+        tCheck_sensor_updates.enable();
+
+        // Call navigation-related actions
+        if (TimeToGo) {
+          currentState = RETURNING_HOME;
+        }
+        if (collect_weight) {
+          currentState = COLLECTING_WEIGHT;
+        }
+        break;
+
+      case COLLECTING_WEIGHT:
+        tNavigation.disable();
+        tUpdate_wall_state.disable();
+        tUpdate_weight_state.disable();
+
+        // Reset finished_collecting before starting collection
+
+        if (NumWeightsCollected == 0) {
+          tCollect_weight_1.enable();
+
+        } else if (NumWeightsCollected == 1) {
+          tCollect_weight_2.enable();
+        } else if (NumWeightsCollected == 2) {
+          tCollect_weight_3.enable();
+        }
+
+        if (finished_collecting) {
+          if (NumWeightsCollected == 0) {
+            tCollect_weight_1.disable();
+            finished_collecting = false;
+
+          } else if (NumWeightsCollected == 1) {
+            tCollect_weight_2.disable();
+            finished_collecting = false;
+
+          } else if (NumWeightsCollected == 2) {
+            tCollect_weight_3.disable();
+            finished_collecting = false;
+
+            currentState = RETURNING_HOME;  // Go to returning after the last weight
+            break;
+          }
+          NumWeightsCollected++;
+          currentState = DRIVING;  // Go back to driving after collecting a weight
+        }
+        break;
+
+      case RETURNING_HOME:
+        tNavigation.disable();
+        tUpdate_wall_state.disable();
+        tUpdate_weight_state.disable();
+        tReturn_home.enable();
+
+        if (homeReached) {
+          currentState = FINISHED;
+        }
+        break;
+
+      case FINISHED:
+        stopAllActions();
+        break;
+    }
+    taskManager.execute();
   } else {
-    stop(1);
+    // Disable tasks when the program is not running
+    stop(10);
+    NumWeightsCollected = 0;
     tNavigation.disable();
     tCheck_orientation.disable();
     tCheck_sensor_updates.disable();
   }
-
-
 }

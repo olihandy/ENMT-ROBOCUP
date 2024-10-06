@@ -1,5 +1,6 @@
 #include "Navigation.h"
 #include "Sensors.h"
+#include "WeightCollection.h"
 
 //--------------------------------------------------------------------------------------------------------//
 //--------------------------------------- Shared Variables ------------------------------------------------//
@@ -10,7 +11,9 @@ bool WeightDetected = false;
 int NumWeightsCollected = 0;
 bool TimeToGo = false;
 bool homeReached = false;
+bool collect_weight = false;
 
+extern volatile bool finished_collecting;
 int LengthOfRobot = 35;
 int five_seconds = 5000;
 int NOCHANGETHRESHOLD = 5;
@@ -18,15 +21,15 @@ int timeWeightDetected;
 unsigned long lastOrientationChangeTime = 0;
 float lastOrientation = 0;
 
-int stepper_motor_fast = 20;
-int stepper_motor_slow = 40;
-int motortime = 100;
+extern int stepper_motor_fast;
+extern int stepper_motor_slow;
+extern int motortime;
 
 WallDetectionState wallState = NO_WALL;
-RobotState currentState = STARTING;
 WeightDetectionState weightState = WEIGHT_NOT_DETECTED;
 
 int numTOFs =7;
+
 
 extern bool electromagnetStates[3];
 extern bool inductionSensorStates[2];
@@ -84,6 +87,12 @@ void CheckForSensorUpdates() {
 
 void checkOrientation(void) {
   yaw = ori[0];
+  pitch =ori[2];
+
+  if(abs(yaw) > 5) {
+    full_reverse(motortime);
+  }
+
   // Check if the orientation has changed significantly (beyond a small tolerance)
   if (abs(yaw - lastOrientation) > 35.0) {
     // Reset the timer if orientation has changed
@@ -128,15 +137,6 @@ void PrintStates(void) {
     case LEFT_WALL_DETECTED: Serial.println("LEFT_WALL_DETECTED"); break;
     case SLAB_WALL_DETECTED: Serial.println("SLAB_WALL_DETECTED"); break;
     case RIGHT_WALL_DETECTED: Serial.println("RIGHT_WALL_DETECTED"); break;
-  }
-
-  Serial.print("CurrentState: ");
-  switch (currentState) {
-    case STARTING: Serial.println("STARTING"); break;
-    case DRIVING: Serial.println("DRIVING"); break;
-    case COLLECTING_WEIGHT: Serial.println("COLLECTING_WEIGHT"); break;
-    case RETURNING_HOME: Serial.println("RETURNING_HOME"); break;
-    case FINISHED: Serial.println("FINISHED"); break;
   }
 
   Serial.print("WeightState: ");
@@ -212,176 +212,92 @@ void Navigation(void) {
   BottomLeft = averagedTOFreadings[5];
   BottomRight = averagedTOFreadings[6];
   BackInduction = !digitalRead(BackInductionPin);  
-  yaw = ori[2];
-    switch (currentState) {
-      case STARTING:
-        // Take start readings, then set readyToDrive
-        if (TopLeft > (TopRight + 200)) {
-          forward_left(motortime);
-        } else {
+
+  switch (weightState) {
+    case WEIGHT_NOT_DETECTED:
+      switch (wallState) {
+        case WALL_AHEAD:
+          full_reverse(motortime);
+          break;
+        case SLIT_DETECTED:
+          full_forward(motortime);
+          break;
+        case LEFT_WALL_DETECTED:
           forward_right(motortime);
-        }
-        ReadyToDrive = true;
-
-        if (ReadyToDrive) {
-          currentState = DRIVING;
-        }
-        break;
-
-      case DRIVING:
-        if(yaw < -5 || yaw > 5) {
+          break;
+        case SLAB_WALL_DETECTED:
           full_reverse(10*motortime);
-        }
-        switch (weightState) {
-          case WEIGHT_NOT_DETECTED:
-            switch (wallState) {
-              case WALL_AHEAD:
-                full_reverse(motortime);
-                break;
-              case SLIT_DETECTED:
-                full_forward(motortime);
-                break;
-              case LEFT_WALL_DETECTED:
-                forward_right(motortime);
-                break;
-              case SLAB_WALL_DETECTED:
-                full_reverse(10*motortime);
-                if (TopLeft > (TopRight)) {
-                  full_turn_left(5*motortime);
-                } else {
-                  full_turn_right(5*motortime);
-                }
-                break;
-              case RIGHT_WALL_DETECTED:
-                forward_left(motortime);
-                break;
-             case NO_WALL:
-             default:
-              full_forward(motortime);
-              break;
-                }
-            break;
-
-          case WEIGHT_DETECTED:
-            if(TopMiddle < 200) {
-              full_reverse(5*motortime);
-              if(TopLeft > TopRight){
-                full_turn_left(5*motortime);
-              } else {
-                full_turn_right(5*motortime);
-              }
-            } else if(TopLeft < 100) {
-              full_reverse(5*motortime);
-              full_turn_left(3*motortime);
-
-            } else if(TopRight < 100) {
-              full_reverse(5*motortime);
-              full_turn_right(3*motortime);
-            } else {
-              if(BottomLeft < 400 || BottomRight <400) {
-                if (BottomLeft > (BottomRight + 50)) {
-                  forward_right_right(3*motortime);
-                } else if (BottomRight > (BottomLeft + 50)) {
-                  forward_left_left(3*motortime);
-                } else {
-                  half_forward(motortime);
-                } 
-              } else {
-              if (BottomLeft > (BottomRight + 50)) {
-                forward_right(3*motortime);
-              } else if (BottomRight > (BottomLeft + 50)) {
-                forward_left(3*motortime);
-              } else {
-                half_forward(motortime);                
-              }
-            }
-            }
-            break;
-          case WEIGHT_CONFIRMED:
-            if((millis() - timeWeightDetected) > timeoutDuration) {
-              weightState = WEIGHT_NOT_DETECTED;
-            }
-            
-            if(NumWeightsCollected == 0) {
-              half_forward(motortime);
-              if (BackInduction) {
-                stop_blocking(motortime);
-                go_down(stepper_motor_fast);
-                currentState = COLLECTING_WEIGHT;
-                }
-            }else if(NumWeightsCollected > 0) {
-              stop_blocking(motortime);
-              big_step_down(stepper_motor_fast);
-              half_forward(10 * motortime);
-              stop_blocking(motortime);
-              little_step_down(stepper_motor_fast);
-              currentState = COLLECTING_WEIGHT;
-            }
-            break;
-        }
+          if (TopLeft > (TopRight)) {
+            full_turn_left(5*motortime);
+          } else {
+            full_turn_right(5*motortime);
+          }
+          break;
+        case RIGHT_WALL_DETECTED:
+          forward_left(motortime);
+          break;
+        case NO_WALL:
+        default:
+        full_forward(motortime);
         break;
+          }
+      break;
 
-    case COLLECTING_WEIGHT:
-        if (NumWeightsCollected == 0) {
-            stop_blocking(motortime);
-            digitalWrite(BackElectromagnetPin, HIGH);  // Activate first electromagnet
-            Serial.println("Electromagnet 0 activated");
-            stop_blocking(motortime);
-            go_up(stepper_motor_fast);
-            NumWeightsCollected++;
-            weightState = WEIGHT_NOT_DETECTED;
-            currentState = DRIVING;
-
-        } else if (NumWeightsCollected == 1) {
-            turn_on_electromagnet(1);
-            stop_blocking(motortime);
-            Serial.println("Electromagnet 1 activated");
-            NumWeightsCollected++;
-            go_up(stepper_motor_fast);
-            weightState = WEIGHT_NOT_DETECTED;            
-            currentState = DRIVING;
-
-        } else if (NumWeightsCollected == 2) {
-            turn_on_electromagnet(2);
-            Serial.println("Electromagnet 2 activated");
-            stop_blocking(motortime);
-            go_up(stepper_motor_fast);
-            currentState = DRIVING;
-            weightState = WEIGHT_NOT_DETECTED;
-            NumWeightsCollected++;
-            TimeToGo = true;
-        }
-        
-        weightState = WEIGHT_NOT_DETECTED; // This will allow you to transition out of CONFIRMED
-        if (TimeToGo) {
-            currentState = RETURNING_HOME;
+    case WEIGHT_DETECTED:
+      if(TopMiddle < 200) {
+        full_reverse(5*motortime);
+        if(TopLeft > TopRight){
+          full_turn_left(5*motortime);
         } else {
-            currentState = DRIVING;
+          full_turn_right(5*motortime);
         }
-        break;
+      } else if(TopLeft < 100) {
+        full_reverse(5*motortime);
+        full_turn_left(3*motortime);
 
-      case RETURNING_HOME:
-        stop(motortime);
-        homeReached = 1;
-        if (homeReached) {
-          stop_blocking(motortime);
-          go_down(stepper_motor_fast);
-          turn_off_electromagnet(0);
-          turn_off_electromagnet(1);
-          turn_off_electromagnet(2);
-          stop_blocking(motortime);
-          go_up(stepper_motor_fast);
-          NumWeightsCollected = 0;
-          currentState = FINISHED;
+      } else if(TopRight < 100) {
+        full_reverse(5*motortime);
+        full_turn_right(3*motortime);
+      } else {
+        if(BottomLeft < 400 || BottomRight <400) {
+          if (BottomLeft > (BottomRight + 50)) {
+            forward_right_right(3*motortime);
+          } else if (BottomRight > (BottomLeft + 50)) {
+            forward_left_left(3*motortime);
+          } else {
+            half_forward(motortime);
+          } 
+        } else {
+        if (BottomLeft > (BottomRight + 50)) {
+          forward_right(3*motortime);
+        } else if (BottomRight > (BottomLeft + 50)) {
+          forward_left(3*motortime);
+        } else {
+          half_forward(motortime);                
         }
-        break;
+      }
+      }
+      break;
+    case WEIGHT_CONFIRMED:
+      if((millis() - timeWeightDetected) > timeoutDuration) {
+        weightState = WEIGHT_NOT_DETECTED;
+      }
+      
+      if(NumWeightsCollected == 0) {
+        half_forward(motortime);
+        if (BackInduction) {
+          collect_weight = true;
+          }
+      }else if(NumWeightsCollected > 0) {
+        collect_weight = true;
+      }
 
-      case FINISHED:
-        stop(motortime);
-        delay(100);
-        homeReached = 0;
-        currentState = STARTING;
-    }
+      if(finished_collecting) {
+        collect_weight = false;
+        weightState = WEIGHT_NOT_DETECTED;
+      }
+      break;
   }
 
+}
 

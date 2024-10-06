@@ -21,6 +21,10 @@ int big_step = 62000;
 int little_step = 5000;
 int teeny_step = 1000;
 
+int stepper_motor_fast = 20;
+int stepper_motor_slow = 40;
+int motortime = 100;
+
 int MAdirpin = 32;
 int MAsteppin = 33;
 int MBdirpin = 30;
@@ -95,6 +99,12 @@ void full_forward(int timedelay) {
 
 void half_forward(int timedelay) {
   nonBlockingMotorAction(timedelay, half_forward_speed, half_forward_speed);
+}
+
+void half_forward_blocking(int timedelay) {
+  myservoA.writeMicroseconds(half_forward_speed);
+  myservoB.writeMicroseconds(half_forward_speed);
+  delay(timedelay); 
 }
 
 void full_turn_right(int timedelay) {
@@ -189,13 +199,13 @@ void go_up(int speed) {
 
 void turn_on_electromagnet(int electromagnet) {
   switch (electromagnet) {
-    case 0:
+    case 1:
       digitalWrite(BackElectromagnetPin, HIGH);  // Activate first electromagnet
       break;
-    case 1:
+    case 2:
       digitalWrite(MiddleElectromagnetPin, HIGH);  // Activate second electromagnet
       break;
-    case 2:
+    case 3:
       digitalWrite(FrontElectromagnetPin, HIGH);  // Activate third electromagnet
       break;
     default:
@@ -206,13 +216,13 @@ void turn_on_electromagnet(int electromagnet) {
 
 void turn_off_electromagnet(int electromagnet) {
   switch (electromagnet) {
-    case 0:
+    case 1:
       digitalWrite(BackElectromagnetPin, LOW);  // Deactivate first electromagnet
       break;
-    case 1:
+    case 2:
       digitalWrite(MiddleElectromagnetPin, LOW);  // Deactivate second electromagnet
       break;
-    case 2:
+    case 3:
       digitalWrite(FrontElectromagnetPin, LOW);  // Deactivate third electromagnet
       break;
     default:

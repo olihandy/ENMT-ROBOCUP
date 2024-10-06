@@ -5,6 +5,14 @@
 #include "Actuators.h"
 #include "IMU.h"
 
+
+extern bool ReadyToDrive;
+extern bool WeightDetected;
+extern int NumWeightsCollected;
+extern bool TimeToGo;
+extern bool homeReached;
+extern bool collect_weight;
+
 extern float ori[3]; // Declare it as extern so it can be accessed in other files
 
 // Wall detection state
@@ -19,18 +27,6 @@ enum WallDetectionState {
 
 // Declare the current wall detection state
 extern WallDetectionState wallState;
-
-// Robot state enumeration
-enum RobotState {
-  STARTING,          // 0 = Starting
-  DRIVING,           // 1 = Driving
-  COLLECTING_WEIGHT, // 2 = Collecting Weight
-  RETURNING_HOME,    // 3 = Returning Home
-  FINISHED           // 4 = Finished
-};
-
-// Declare the current robot state
-extern RobotState currentState;
 
 // Weight detection state enumeration
 enum WeightDetectionState {
