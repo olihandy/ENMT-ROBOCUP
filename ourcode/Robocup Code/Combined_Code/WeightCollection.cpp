@@ -4,18 +4,14 @@ extern int stepper_motor_fast;
 extern int stepper_motor_slow;
 extern int motortime;
 
-bool finished_collecting;
-
-
 void CollectWeight_1(void) {
   half_forward(motortime);
-  if (!digitalRead(BackInductionPin) {
+  if (!digitalRead(BackInductionPin)) {
     stop_blocking(motortime);
     go_down(stepper_motor_fast);
     turn_on_electromagnet(1);
     stop_blocking(motortime);
     go_up(stepper_motor_fast);
-    finished_collecting = true;
   }
 
 }
@@ -29,7 +25,6 @@ void CollectWeight_2(void) {
   turn_on_electromagnet(2);
   stop_blocking(motortime);
   go_up(stepper_motor_fast);
-  finished_collecting = true;
 
 }
 
@@ -43,5 +38,4 @@ void CollectWeight_3(void) {
   turn_on_electromagnet(3);
   stop_blocking(motortime);
   go_up(stepper_motor_fast);
-  finished_collecting = true;
 }

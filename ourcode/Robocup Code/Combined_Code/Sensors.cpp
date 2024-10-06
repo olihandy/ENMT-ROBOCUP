@@ -234,9 +234,6 @@ void GetInduction(void) {
 
 void PrintInformation() {
     elapsed_time = millis() / 1000;
-    GetTOF(); // Update TOF readings
-    GetElectroMagnet(); // Update electromagnet states
-    GetInduction(); // Update induction sensor states
 
     if (ColorCompareHome()) {
       Serial.println("Color matches the starting color.");

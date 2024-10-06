@@ -13,7 +13,7 @@ bool TimeToGo = false;
 bool homeReached = false;
 bool collect_weight = false;
 
-extern volatile bool finished_collecting;
+extern bool finished_collecting;
 int LengthOfRobot = 35;
 int five_seconds = 5000;
 int NOCHANGETHRESHOLD = 5;
@@ -31,7 +31,6 @@ WeightDetectionState weightState = WEIGHT_NOT_DETECTED;
 int numTOFs =7;
 
 
-extern bool electromagnetStates[3];
 extern bool inductionSensorStates[2];
 extern uint16_t averagedTOFreadings[7];
 
@@ -220,6 +219,7 @@ void Navigation(void) {
 
   switch (weightState) {
     case WEIGHT_NOT_DETECTED:
+    collect_weight = false;
       switch (wallState) {
         case WALL_AHEAD:
           full_reverse(motortime);
@@ -284,12 +284,8 @@ void Navigation(void) {
       }
       break;
 
-    case WEIGHT_CONFIRMED;
+    case WEIGHT_CONFIRMED:
       collect_weight = true;
-      if(finished_collecting) {
-        collect_weight = false;
-        weightState = WEIGHT_NOT_DETECTED;
-      }
       break;
   }
 

@@ -40,7 +40,7 @@ extern int NumWeightsCollected;
 extern bool TimeToGo;
 extern bool homeReached;
 extern bool collect_weight;
-extern volatile bool finished_collecting;
+extern bool electromagnetStates[3];         // State of electromagnets
 
 // Robot state enumeration
 enum RobotState {
@@ -266,7 +266,8 @@ void task_init() {
 // put your main code here, to run repeatedly
 //**********************************************************************************
 void loop() {
-  Serial.print(finished_collecting);
+  unsigned long collectionStartTime = 0;  // Time when the current collection started
+  const unsigned long collectionDelay = 5000;  // 5-second delay between state transitions
   if (runProgram) {
     int currentTime = millis() / 1000;
     if (currentTime > 100) {
@@ -284,7 +285,6 @@ void loop() {
         tNavigation.enable();
         
 
-        Serial.println("Starting Navigation...");
         ReadyToDrive = true;
         if (ReadyToDrive) {
           currentState = DRIVING;
@@ -311,52 +311,55 @@ void loop() {
         tNavigation.disable();
         tUpdate_wall_state.disable();
         tUpdate_weight_state.disable();
+        tCollect_weight_1.disable();
+        tCollect_weight_2.disable();
+        tCollect_weight_3.disable();
 
-        // Enable the appropriate collection task based on the collectionState
-        switch (collectionState) {
-          case ZERO:
-            tCollect_weight_1.enable();
-            break;
-          case ONE:
-            tCollect_weight_2.enable();
-            break;
-          case TWO:
-            tCollect_weight_3.enable();
-            break;
-          case THREE:
-            // All weights collected, prepare to return home
-            currentState = RETURNING_HOME; 
-            break;
-        }
+        // Check if enough time has passed since the last collection
+        if (millis() - collectionStartTime >= collectionDelay) {
 
-        // Check if the collection is finished for the current weight
-        if (finished_collecting) {
-          // Disable the current collection task
+          // Enable the appropriate collection task based on the collectionState
           switch (collectionState) {
             case ZERO:
-              tCollect_weight_1.disable();
+              tCollect_weight_1.enable(); // Enable task to collect first weight
               break;
+
             case ONE:
-              tCollect_weight_2.disable();
+              tCollect_weight_2.enable(); // Enable task to collect second weight
               break;
+
             case TWO:
-              tCollect_weight_3.disable();
+              tCollect_weight_3.enable(); // Enable task to collect third weight
               break;
-            default:
+
+            case THREE:
+              currentState = RETURNING_HOME; // Move to returning home after collecting all weights
               break;
           }
-
-          // Move to the next collection state
-          if (collectionState < THREE) {
-            collectionState = static_cast<WeightsCollectedState>(collectionState + 1);
+          Serial.println(collectionState);
+          Serial.println(NumWeightsCollected);
+          // Check if a weight was collected
+          if (NumWeightsCollected > static_cast<int>(collectionState)) {
+            // Move to the next collection state only if a weight has been successfully collected
+            if (collectionState < THREE) {
+              collectionState = static_cast<WeightsCollectedState>(collectionState + 1);
+              collectionStartTime = millis(); // Reset the timer after collecting a weight
+            }
+          Serial.print(electromagnetStates[0]);         // State of electromagnets
+          if(!digitalRead(BackElectromagnetPin)) {
+            NumWeightsCollected = 1;
           }
 
-          // Reset finished_collecting for the next weight
-          finished_collecting = false;
+            // Set currentState back to DRIVING after the weight is collected
+           collect_weight = false;
+            currentState = DRIVING;
+          }
         }
+
         break;
 
       case RETURNING_HOME:
+        Serial.print("HOMETIME");
         tNavigation.disable();
         tUpdate_wall_state.disable();
         tUpdate_weight_state.disable();
