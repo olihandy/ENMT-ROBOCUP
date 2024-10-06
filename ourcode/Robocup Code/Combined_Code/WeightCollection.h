@@ -3,6 +3,7 @@
 #ifndef WEIGHTCOLLECTION_H
 #define WEIGHTCOLLECTION_H 
 
+#include "Sensors.h"
 #include "Actuators.h"
 #include <stdio.h>
 

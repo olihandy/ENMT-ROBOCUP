@@ -185,6 +185,7 @@ void UpdateWeightState(void) {
   BottomLeft = averagedTOFreadings[5];
   BottomRight = averagedTOFreadings[6];
   FrontInduction = !digitalRead(FrontInductionPin);
+  
   if (FrontInduction) {
     if (weightState != WEIGHT_CONFIRMED) {
       weightState = WEIGHT_CONFIRMED;
@@ -197,7 +198,11 @@ void UpdateWeightState(void) {
       weightState = WEIGHT_NOT_DETECTED;
     }
   }
+  // if((millis() - timeWeightDetected) > timeoutDuration) {
+  //   weightState = WEIGHT_NOT_DETECTED;
+  // }
 }
+
 
 //--------------------------------------------------------------------------------------------------------//
 //----------------------------------- Navigation Logic ---------------------------------------------------//
@@ -278,20 +283,9 @@ void Navigation(void) {
       }
       }
       break;
-    case WEIGHT_CONFIRMED:
-      if((millis() - timeWeightDetected) > timeoutDuration) {
-        weightState = WEIGHT_NOT_DETECTED;
-      }
-      
-      if(NumWeightsCollected == 0) {
-        half_forward(motortime);
-        if (BackInduction) {
-          collect_weight = true;
-          }
-      }else if(NumWeightsCollected > 0) {
-        collect_weight = true;
-      }
 
+    case WEIGHT_CONFIRMED;
+      collect_weight = true;
       if(finished_collecting) {
         collect_weight = false;
         weightState = WEIGHT_NOT_DETECTED;

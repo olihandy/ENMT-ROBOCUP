@@ -50,9 +50,17 @@ enum RobotState {
   RETURNING_HOME,    // 3 = Returning Home
   FINISHED           // 4 = Finished
 };
-
 // Declare the current robot state
 RobotState currentState = STARTING;
+
+enum WeightsCollectedState {
+  ZERO,
+  ONE,
+  TWO,
+  THREE
+};
+WeightsCollectedState collectionState = ZERO;
+
 
 
 //**********************************************************************************
@@ -76,9 +84,9 @@ RobotState currentState = STARTING;
 #define PRINT_IMU_TASK_PERIOD               500       //Takes 0ms?
 #define PRINT_INFORMATION_TASK_PERIOD       500     //Takes 130 ms
 #define PRINT_STATES_TASK_PERIOD            500     //Takes 0 ms? 
-#define COLLECT_WEIGHT_1_TASK_PERIOD        100
-#define COLLECT_WEIGHT_2_TASK_PERIOD        100
-#define COLLECT_WEIGHT_3_TASK_PERIOD        100
+#define COLLECT_WEIGHT_1_TASK_PERIOD        500
+#define COLLECT_WEIGHT_2_TASK_PERIOD        500
+#define COLLECT_WEIGHT_3_TASK_PERIOD        500
 #define RETURN_HOME_TASK_PERIOD             1000
 
 // Task execution amount definitions
@@ -258,6 +266,7 @@ void task_init() {
 // put your main code here, to run repeatedly
 //**********************************************************************************
 void loop() {
+  Serial.print(finished_collecting);
   if (runProgram) {
     int currentTime = millis() / 1000;
     if (currentTime > 100) {
@@ -303,35 +312,47 @@ void loop() {
         tUpdate_wall_state.disable();
         tUpdate_weight_state.disable();
 
-        // Reset finished_collecting before starting collection
-
-        if (NumWeightsCollected == 0) {
-          tCollect_weight_1.enable();
-
-        } else if (NumWeightsCollected == 1) {
-          tCollect_weight_2.enable();
-        } else if (NumWeightsCollected == 2) {
-          tCollect_weight_3.enable();
+        // Enable the appropriate collection task based on the collectionState
+        switch (collectionState) {
+          case ZERO:
+            tCollect_weight_1.enable();
+            break;
+          case ONE:
+            tCollect_weight_2.enable();
+            break;
+          case TWO:
+            tCollect_weight_3.enable();
+            break;
+          case THREE:
+            // All weights collected, prepare to return home
+            currentState = RETURNING_HOME; 
+            break;
         }
 
+        // Check if the collection is finished for the current weight
         if (finished_collecting) {
-          if (NumWeightsCollected == 0) {
-            tCollect_weight_1.disable();
-            finished_collecting = false;
-
-          } else if (NumWeightsCollected == 1) {
-            tCollect_weight_2.disable();
-            finished_collecting = false;
-
-          } else if (NumWeightsCollected == 2) {
-            tCollect_weight_3.disable();
-            finished_collecting = false;
-
-            currentState = RETURNING_HOME;  // Go to returning after the last weight
-            break;
+          // Disable the current collection task
+          switch (collectionState) {
+            case ZERO:
+              tCollect_weight_1.disable();
+              break;
+            case ONE:
+              tCollect_weight_2.disable();
+              break;
+            case TWO:
+              tCollect_weight_3.disable();
+              break;
+            default:
+              break;
           }
-          NumWeightsCollected++;
-          currentState = DRIVING;  // Go back to driving after collecting a weight
+
+          // Move to the next collection state
+          if (collectionState < THREE) {
+            collectionState = static_cast<WeightsCollectedState>(collectionState + 1);
+          }
+
+          // Reset finished_collecting for the next weight
+          finished_collecting = false;
         }
         break;
 
