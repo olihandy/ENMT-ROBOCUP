@@ -34,7 +34,7 @@ void setup_IMU(void);
 void IMUGetPos(void);
 void printEvent(sensors_event_t* event);
 void MovingAverageFilter(void);
-void IMU(void);
+double IMU(void);
 void IMUprint(void);
 
 #endif // IMU_H

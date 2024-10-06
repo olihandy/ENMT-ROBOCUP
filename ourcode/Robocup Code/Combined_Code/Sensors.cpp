@@ -163,11 +163,12 @@ void colorSensorDetect(uint16_t* returnlist) {
   returnlist[3] = blue;
 }
 
-void colorStart() {
+uint16_t colorStart() {
   clear_Start = colorlist[0];
   red_Start = colorlist[1];
   green_Start = colorlist[2];
-  blue_Start = colorlist[3]; 
+  blue_Start = colorlist[3];
+  return clear_Start, red_Start, green_Start, blue_Start;
 }
 
 bool ColorCompareHome() {

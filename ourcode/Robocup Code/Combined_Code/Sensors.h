@@ -73,7 +73,7 @@ void UpdateTOFReadings();
 uint32_t GetAverageTOFReading(int sensorIndex);
 uint16_t* GetAverageTOF();
 void colorSensorDetect(uint16_t* returnlist);
-void colorStart();
+uint16_t colorStart();
 bool ColorCompareHome();
 void CheckAndPrintColorMatch();
 

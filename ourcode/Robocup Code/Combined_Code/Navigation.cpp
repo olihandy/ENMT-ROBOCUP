@@ -1,5 +1,6 @@
 #include "Navigation.h"
 #include "Sensors.h"
+#include "IMU.h"
 
 //--------------------------------------------------------------------------------------------------------//
 //--------------------------------------- Shared Variables ------------------------------------------------//
@@ -9,7 +10,9 @@ bool ReadyToDrive = false;
 bool WeightDetected = false;
 int NumWeightsCollected = 0;
 bool TimeToGo = false;
+double Startangle = 0;
 bool homeReached = false;
+int FoundWall = 0;
 
 int LengthOfRobot = 35;
 int five_seconds = 5000;
@@ -144,11 +147,17 @@ void UpdateWeightState(uint32_t MiddleRight, uint32_t BottomRight, uint32_t Midd
 //--------------------------------------------------------------------------------------------------------//
 
 void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_t MiddleLeft, uint32_t MiddleRight, uint32_t BottomLeft, uint32_t BottomRight, bool BackInduction) {
-
-
+    if ((millis()/1000) > 100) {
+      currentState = RETURNING_HOME;
+    }
     switch (currentState) {
+       //This is here for when it is needed
       case STARTING:
         // Take start readings, then set readyToDrive
+        uint16_t clear_Start, red_Start, green_Start, blue_Start = colorStart();
+        double AverageAngX, StraightTotalTravelxperp, StraightTotalTravelypara = IMU();
+        Startangle = AverageAngX;
+
         if (TopLeft > (TopRight + 20)) {
           forward_left(motortime);
         } else {
@@ -286,8 +295,72 @@ void Navigation(uint32_t TopMiddle, uint32_t TopLeft, uint32_t TopRight, uint32_
         break;
 
       case RETURNING_HOME:
-        stop(motortime);
-        homeReached = 1;
+        if (FoundWall == 0 && homeReached == 0) {
+          if (TopRight>20 && TopLeft>20) {
+            Serial.print("Moving Forward Home  ");
+            double AverageAngX, StraightTotalTravelxperp, StraightTotalTravelypara = IMU();
+            int homeangle_to_robot = int(atan2(StraightTotalTravelypara, StraightTotalTravelxperp) * 180 / PI); // Calculate angle to home
+            homeangle_to_robot += Startangle; // Adjust by initial angle (Startangle)
+
+            Serial.print(Startangle);
+            Serial.print("  ");
+            Serial.print(homeangle_to_robot);
+
+            // Adjust the home angle to point the robot toward home
+            int heading_home_angle = homeangle_to_robot - 180;
+
+            // Wrap the heading_home_angle to stay within 0-360 degrees
+            if (heading_home_angle < 0) {
+              heading_home_angle += 360;
+            } else if (heading_home_angle >= 360) {
+              heading_home_angle -= 360;
+            }
+
+            // Determine if we need to turn left, right, or move forward
+            int angle_diff = AverageAngX - heading_home_angle; // Calculate difference between current angle and target home heading
+
+            // Wrap angle_diff to handle circular nature of angles
+            if (angle_diff > 180) {
+              angle_diff -= 360; // Ensure it's within -180 to 180 range
+            } else if (angle_diff < -180) {
+              angle_diff += 360;
+            }
+
+            // Decision making: Turn left, right, or move forward based on the angle difference
+            if (angle_diff > 10) {
+              full_turn_left(motortime); // If too far right, turn left
+            } else if (angle_diff < -10) {
+              full_turn_right(motortime); // If too far left, turn right
+            } else {
+              full_forward(motortime); // If within the desired range, move forward
+            }
+          } else if (TopRight < 20 && TopMiddle<50) {
+            full_turn_left(motortime); //When at a wall
+          } else if (TopLeft < 20 && TopMiddle<50) {
+            full_turn_right(motortime);
+          }
+          if ((TopRight < 30) && (TopMiddle>50)){
+            FoundWall = 1; //If a right wall is found
+          } else if ((TopLeft < 30) && (TopMiddle>50)){
+            FoundWall = 2; //If a left wall is found
+          }
+        } else if (FoundWall == 1 && homeReached == 0) {
+          full_forward(motortime);
+          if (FoundWall == 1) {
+            if (TopRight > 30){
+              full_turn_right(motortime);
+            } else if (TopRight<5) {
+              full_turn_left(motortime);
+            }
+          } else {
+            if (TopLeft > 30){
+              full_turn_left(motortime);
+            } else if (TopLeft<5) {
+              full_turn_right(motortime);
+            }
+          }
+        }
+        bool homeReached = ColorCompareHome();
         if (homeReached) {
           stop(motortime);
           go_down(stepper_motor_slow);
