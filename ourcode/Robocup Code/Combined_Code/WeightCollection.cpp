@@ -13,7 +13,7 @@ void CollectWeight_1(void) {
     go_down(stepper_motor_fast);
     turn_on_electromagnet(1);
     stop_blocking(motortime);
-    go_up(stepper_motor_fast);
+    go_up(stepper_motor_slow);
     NumWeightsCollected++;
   }
 }

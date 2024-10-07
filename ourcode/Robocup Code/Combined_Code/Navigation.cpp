@@ -6,6 +6,13 @@
 //--------------------------------------- Shared Variables ------------------------------------------------//
 //--------------------------------------------------------------------------------------------------------//
 
+
+int reverseCount = 0;                  // Counter for reversals
+const int reverseThreshold = 5;        // Number of times robot can reverse before it turns around
+unsigned long lastReverseTime = 0;     // Time when the last reverse happened
+const unsigned long reverseTimeout = 10000; // 10 seconds timeout to reset the reverse count
+
+
 bool ReadyToDrive = false;
 bool WeightDetected = false;
 bool TimeToGo = false;
@@ -183,87 +190,123 @@ void Navigation(void) {
   BottomRight = averagedTOFreadings[6];
   BackInduction = !digitalRead(BackInductionPin);  
 
+  unsigned long currentTime = millis();
+
+  // Check if enough time has passed since the last reverse to reset the counter
+  if (currentTime - lastReverseTime > reverseTimeout) {
+    reverseCount = 0;  // Reset reverse count after timeout
+  }
+
   switch (weightState) {
     case WEIGHT_NOT_DETECTED:
-    collect_weight = false;
+      collect_weight = false;
       switch (wallState) {
         case WALL_AHEAD:
           full_reverse(motortime);
+          reverseCount++;  // Increment reverse counter
+          lastReverseTime = currentTime;  // Update the last reverse time
+
+          // If the robot has reversed too many times, perform a 180-degree turn
+          if (reverseCount >= reverseThreshold) {
+            full_turn_right_blocking(15*motortime);  // 180-degree turn
+            reverseCount = 0;  // Reset reverse counter
+            Serial.println("Stuck in a loop. Performing 180-degree turn.");
+          }
           break;
+
         case SLIT_DETECTED:
           full_forward(motortime);
           break;
+
         case LEFT_WALL_DETECTED:
           forward_right(motortime);
           break;
+
         case SLAB_WALL_DETECTED:
-          full_reverse(10*motortime);
-          if (TopLeft > (TopRight)) {
-            full_turn_left_blocking(5*motortime);
+          full_reverse(10 * motortime);
+          reverseCount++;
+          lastReverseTime = currentTime;
+          if (reverseCount >= reverseThreshold) {
+            full_turn_right_blocking(200 * motortime);
+            reverseCount = 0;
+            Serial.println("Stuck in a loop. Performing 180-degree turn.");
+          }
+          if (TopLeft > TopRight) {
+            full_turn_left_blocking(5 * motortime);
           } else {
-            full_turn_right_blocking(5*motortime);
+            full_turn_right_blocking(5 * motortime);
           }
           break;
+
         case RIGHT_WALL_DETECTED:
           forward_left(motortime);
           break;
+
         case NO_WALL:
         default:
-        full_forward(motortime);
-        break;
-          }
+          full_forward(motortime);
+          break;
+      }
       break;
 
     case WEIGHT_DETECTED:
-      if(TopMiddle < 200) {
-        full_reverse(5*motortime);
-        if(TopLeft > TopRight){
-          full_turn_left(5*motortime);
-        } else {
-          full_turn_right(5*motortime);
+      if (TopMiddle < 200) {
+        full_reverse(5 * motortime);
+        reverseCount++;
+        lastReverseTime = currentTime;
+        if (reverseCount >= reverseThreshold) {
+          full_turn_right_blocking(200 * motortime);
+          reverseCount = 0;
+          Serial.println("Stuck in a loop. Performing 180-degree turn.");
         }
-      } else if(TopLeft < 100) {
-        full_reverse_blocking(5*motortime);
-        full_turn_left_blocking(3*motortime);
 
-      } else if(TopRight < 100) {
-        full_reverse_blocking(5*motortime);
-        full_turn_right_blocking(3*motortime);
+        if (TopLeft > TopRight) {
+          full_turn_left(5 * motortime);
+        } else {
+          full_turn_right(5 * motortime);
+        }
+      } else if (TopLeft < 100) {
+        full_reverse_blocking(5 * motortime);
+        full_turn_left_blocking(3 * motortime);
+      } else if (TopRight < 100) {
+        full_reverse_blocking(5 * motortime);
+        full_turn_right_blocking(3 * motortime);
       } else {
-        if(BottomLeft < 400 || BottomRight <400) {
+        if (BottomLeft < 400 || BottomRight < 400) {
           if (BottomLeft > (BottomRight + 50)) {
-            full_turn_right_blocking(5*motortime);
+            full_turn_right_blocking(5 * motortime);
           } else if (BottomRight > (BottomLeft + 50)) {
-            full_turn_left_blocking(5*motortime);
+            full_turn_left_blocking(5 * motortime);
           } else {
             half_forward(motortime);
-          } 
+          }
         } else {
-        if (BottomLeft > (BottomRight + 50)) {
-          forward_right(3*motortime);
-        } else if (BottomRight > (BottomLeft + 50)) {
-          forward_left(3*motortime);
-        } else {
-          half_forward(motortime);                
+          if (BottomLeft > (BottomRight + 50)) {
+            forward_right(3 * motortime);
+          } else if (BottomRight > (BottomLeft + 50)) {
+            forward_left(3 * motortime);
+          } else {
+            half_forward(motortime);
+          }
         }
-      }
       }
       break;
 
     case WEIGHT_CONFIRMED:
-      if(TopMiddle < 300) {
-        if(TopLeft > TopRight) {
-          full_turn_left_blocking(5*motortime);
+      if (TopMiddle < 300) {
+        if (TopLeft > TopRight) {
+          full_turn_left_blocking(5 * motortime);
         } else {
-          full_turn_right_blocking(5*motortime);
+          full_turn_right_blocking(5 * motortime);
         }
       } else {
         collect_weight = true;
         weightState = WEIGHT_NOT_DETECTED;
       }
       break;
-    }
   }
+}
+
 
 
 
