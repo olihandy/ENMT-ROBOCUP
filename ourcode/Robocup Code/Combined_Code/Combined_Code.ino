@@ -266,11 +266,7 @@ void returningHomeActions() {
   tIMU_print.enable();
   tPrint_information.disable();
   tRead_TOF.enable();
-  tCheck_orientation.enable();
-
-
-
-  
+  tCheck_orientation.disable();
 }
 //**********************************************************************************
 // Initialise the tasks for the scheduler
@@ -426,6 +422,7 @@ void loop() {
         returningHomeActions();
         if (homeReached) {
           full_forward_blocking(5*motortime);
+          stop(motortime);
           currentState = FINISHED;
         }
         break;

@@ -199,9 +199,9 @@ void Navigation(void) {
         case SLAB_WALL_DETECTED:
           full_reverse(10*motortime);
           if (TopLeft > (TopRight)) {
-            full_turn_left(5*motortime);
+            full_turn_left_blocking(5*motortime);
           } else {
-            full_turn_right(5*motortime);
+            full_turn_right_blocking(5*motortime);
           }
           break;
         case RIGHT_WALL_DETECTED:

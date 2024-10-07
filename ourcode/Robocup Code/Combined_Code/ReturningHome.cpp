@@ -10,8 +10,8 @@ enum WallState {
 
 WallState currentWallState = TURN_TO_ORIENTATION;
 int FoundWall = 0;           
-int homeAngle = 225;        
-// int homeAngle = 135;
+// int homeAngle = 225;        
+int homeAngle = 135;
 extern bool homeReached;
 extern int motortime;
 
@@ -21,7 +21,7 @@ uint16_t Left = averagedTOFreadings[1];
 uint16_t Right = averagedTOFreadings[2];
 
 
-void return_home(void) {
+void return_home(void) {c:\Users\aos30\OneDrive - University of Canterbury\University\2024\ENMT ENME 301\Robocup\ENMT-ROBOCUP\ourcode\Robocup Code\Combined_Code\DropWeights.cpp
   Serial.print(currentWallState);
   Middle = averagedTOFreadings[0];
   Left = averagedTOFreadings[1];

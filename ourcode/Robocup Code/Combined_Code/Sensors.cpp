@@ -189,9 +189,9 @@ bool ColorCompareHome() {
   for (int i = 0; i < 4; i++) {
     int difference = abs(colorlist[i] - startColors[i]);
     if (difference > tolerances[i]) {
-      Serial.print(colorNames[i]);
-      Serial.print(" value is out of tolerance by ");
-      Serial.println(difference);  // Print the difference for debugging
+      // Serial.print(colorNames[i]);
+      // Serial.print(" value is out of tolerance by ");
+      // Serial.println(difference);  // Print the difference for debugging
       return false;  // One or more colors are out of tolerance
     }
   }
