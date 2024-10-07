@@ -12,13 +12,8 @@
   #include <arduino.h>
 
   // Global variables for IMU data
-  double StartAngle = 0;                // Starting angle
-  uint16_t BNO055_SAMPLERATE_DELAY_MS = 100; // Sample rate delay
   sensors_event_t orientationData;
-  float AverageAngleX = 0;
-  float AverageAngleZ = 0;
-  float ori[3];
-  float PreviousTime;
+  float ori[2];
   // Create an instance of the BNO055 sensor
   Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire); // Initialize sensor with I2C address 0x28
 
@@ -38,12 +33,12 @@
 
 
   void printEvent(sensors_event_t* event) { //problems getting right event
-    double x_ori = -1000000, z_ori = -1000000;
+    double x_ori = -1000000, y_ori = -1000000;
     if (event->type == SENSOR_TYPE_ORIENTATION) {
       x_ori = event->orientation.x;
-      z_ori = event->orientation.y;
+      y_ori = event->orientation.y;
       ori[0] = x_ori;
-      ori[2] = z_ori;
+      ori[1] = y_ori;
     } else {
       Serial.print("Unk:");
     }
@@ -64,9 +59,11 @@
     IMUGetOrientation();                  // Retrieve position and orientation data
   }
 
-  void IMU_print(void) {
-    Serial.print("Orientation X: ");
-    Serial.println(ori[0]);
-    Serial.print("Orientation Z: ");
-    Serial.println(ori[2]);
-  }
+void IMU_print(void) {
+  Serial.println("-----------------------------------------------------------------------");
+  Serial.print("yaw: ");
+  Serial.println(ori[0]);
+  Serial.print("Pitch:");
+  Serial.println(ori[1]);
+  Serial.println("-----------------------------------------------------------------------");
+}

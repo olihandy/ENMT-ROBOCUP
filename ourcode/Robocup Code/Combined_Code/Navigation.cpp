@@ -47,9 +47,9 @@ uint16_t BottomRight = averagedTOFreadings[6];
 bool BackInduction = !digitalRead(BackInductionPin);
 bool FrontInduction = !digitalRead(FrontInductionPin);
 
-extern float ori[3];
+extern float ori[2];
 
-float pitch = ori[2];
+float pitch = ori[1];
 float yaw = ori[0];
 
 uint16_t prevTOFReadings[7];
@@ -86,7 +86,7 @@ void CheckForSensorUpdates() {
 
 void checkOrientation(void) {
   yaw = ori[0];
-  pitch = ori[2];
+  pitch = ori[1];
 
   if(abs(pitch) > 5) {
     full_reverse_blocking(5*motortime);
@@ -103,7 +103,7 @@ void checkOrientation(void) {
   // If the robot has been facing the same direction for too long
   if ((millis() - lastOrientationChangeTime) > five_seconds) {
     // Time to turn around
-    full_turn_left_blocking(10*motortime);
+    full_turn_left_blocking(100*motortime);
     Serial.println("No direction change detected, turning");
     
     // After turning, reset the timer and the orientation

@@ -74,7 +74,7 @@ WeightsCollectedState collectionState = ZERO;
 #define TOF_READ_TASK_PERIOD                70     //Takes 45 ms, 70 ms max
 #define READ_ELECTROMAGNET_TASK_PERIOD      50     // Takes 0 ms
 #define READ_INDUCTIVE_TASK_PERIOD          50     // Takes 0 ms
-#define IMU_UPDATE_TASK_PERIOD              5       //Takes 2 ms
+#define IMU_UPDATE_TASK_PERIOD              50       //Takes 2 ms
 #define WALL_UPDATE_TASK_PERIOD             50     //Takes 0ms
 #define WEIGHT_UPDATE_TASK_PERIOD           50     //Takes 0ms?
 #define CHECK_ORIENTATION_TASK_PERIOD       50     //Takes 0ms?
@@ -86,7 +86,8 @@ WeightsCollectedState collectionState = ZERO;
 #define COLLECT_WEIGHT_1_TASK_PERIOD        500
 #define COLLECT_WEIGHT_2_TASK_PERIOD        500
 #define COLLECT_WEIGHT_3_TASK_PERIOD        500
-#define RETURN_HOME_TASK_PERIOD             1000
+#define RETURN_HOME_TASK_PERIOD             500
+#define COLOUR_COMPARE_TASK_PERIOD          50
 
 // Task execution amount definitions
 // -1 means indefinitely
@@ -106,6 +107,7 @@ WeightsCollectedState collectionState = ZERO;
 #define COLLECT_WEIGHT_2_NUM_EXECUTE           -1
 #define COLLECT_WEIGHT_3_NUM_EXECUTE           -1
 #define RETURN_HOME_NUM_EXECUTE                -1
+#define COLOUR_COMPARE_NUM_EXECTUTE            -1
 
 
 
@@ -144,6 +146,7 @@ Task tCollect_weight_1(COLLECT_WEIGHT_1_TASK_PERIOD,              COLLECT_WEIGHT
 Task tCollect_weight_2(COLLECT_WEIGHT_2_TASK_PERIOD,              COLLECT_WEIGHT_2_NUM_EXECUTE,             &CollectWeight_2);
 Task tCollect_weight_3(COLLECT_WEIGHT_3_TASK_PERIOD,              COLLECT_WEIGHT_3_NUM_EXECUTE,             &CollectWeight_3);
 Task tReturn_home(RETURN_HOME_TASK_PERIOD,                        RETURN_HOME_NUM_EXECUTE,                  &return_home);
+Task tColour_compare(COLOUR_COMPARE_TASK_PERIOD,                  COLOUR_COMPARE_NUM_EXECTUTE,              &ColorCompareHome);
 
 
 
@@ -216,6 +219,7 @@ void stopAllActions() {
   tCollect_weight_2.disable();
   tCollect_weight_3.disable();
   tReturn_home.disable();
+  tColour_compare.disable();  
 }
 
 void startingActions() {
@@ -235,6 +239,8 @@ void startingActions() {
   tCollect_weight_2.disable();
   tCollect_weight_3.disable();
   tReturn_home.disable();
+  tColour_compare.enable();  
+
 }
 
 void drivingActions() {
@@ -243,10 +249,12 @@ void drivingActions() {
 
 
 void returningHomeActions() {
+  stop_blocking(10);
   tNavigation.disable();
   tUpdate_wall_state.disable();
   tUpdate_weight_state.disable();
   tReturn_home.enable();
+  tColour_compare.enable();  
 }
 //**********************************************************************************
 // Initialise the tasks for the scheduler
@@ -272,6 +280,7 @@ void task_init() {
   taskManager.addTask(tCollect_weight_2);
   taskManager.addTask(tCollect_weight_3);
   taskManager.addTask(tReturn_home);
+  taskManager.addTask(tColour_compare);
 
   // Enable the tasks
   tRead_TOF.enable();
@@ -290,6 +299,7 @@ void task_init() {
   tCollect_weight_2.enable();
   tCollect_weight_3.enable();
   tReturn_home.enable();
+  tColour_compare.enable();
 
   Serial.println("Tasks have been initialised \n");
 }
@@ -317,7 +327,7 @@ void loop() {
 
   if (runProgram) {
     int currentTime = millis() / 1000;
-    if (currentTime > 100) {
+    if (currentTime > 10) {
       TimeToGo = true;
     }
 

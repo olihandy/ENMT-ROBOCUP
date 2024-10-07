@@ -174,12 +174,17 @@ void colorStart() {
   red_Start = colorlist[1];
   green_Start = colorlist[2];
   blue_Start = colorlist[3]; 
+
+  Serial.print(colorlist[0]);
+  Serial.print(colorlist[1]);
+  Serial.print(colorlist[2]);
+  Serial.print(colorlist[3]);
 }
 
 bool ColorCompareHome() {
   // Define separate tolerances for clear and colors
-  const int clearTolerance = 30;  // Higher tolerance for clear channel
-  const int colorTolerance = 15;   // Tighter tolerance for RGB channels
+  const int clearTolerance = 0;  // Higher tolerance for clear channel
+  const int colorTolerance = 0;   // Tighter tolerance for RGB channels
 
   // Array of starting colors and current colors for comparison
   uint16_t startColors[] = {clear_Start, red_Start, green_Start, blue_Start};
@@ -189,6 +194,7 @@ bool ColorCompareHome() {
   // Loop through each color and compare with the starting color
   for (int i = 0; i < 4; i++) {
     int difference = abs(colorlist[i] - startColors[i]);
+    Serial.print("asd");
     if (difference > tolerances[i]) {
       Serial.print(colorNames[i]);
       Serial.print(" value is out of tolerance by ");

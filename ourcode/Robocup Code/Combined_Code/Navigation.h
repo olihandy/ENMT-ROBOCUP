@@ -13,7 +13,7 @@ extern bool TimeToGo;
 extern bool homeReached;
 extern bool collect_weight;
 
-extern float ori[3]; // Declare it as extern so it can be accessed in other files
+extern float ori[2]; // Declare it as extern so it can be accessed in other files
 
 // Wall detection state
 enum WallDetectionState {

@@ -7,7 +7,7 @@
 
 // Create an instance of the BNO055 sensor
 extern Adafruit_BNO055 bno;                // Initialize sensor with I2C address 0x28
-extern float ori[];
+extern float ori[2];
 
 // Function prototypes
 void setup_IMU(void);
