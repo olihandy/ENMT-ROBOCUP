@@ -223,18 +223,18 @@ void Navigation(void) {
           full_turn_right(5*motortime);
         }
       } else if(TopLeft < 100) {
-        full_reverse(5*motortime);
-        full_turn_left(3*motortime);
+        full_reverse_blocking(5*motortime);
+        full_turn_left_blocking(3*motortime);
 
       } else if(TopRight < 100) {
-        full_reverse(5*motortime);
-        full_turn_right(3*motortime);
+        full_reverse_blocking(5*motortime);
+        full_turn_right_blocking(3*motortime);
       } else {
         if(BottomLeft < 400 || BottomRight <400) {
           if (BottomLeft > (BottomRight + 50)) {
-            forward_right_right(3*motortime);
+            full_turn_right_blocking(5*motortime);
           } else if (BottomRight > (BottomLeft + 50)) {
-            forward_left_left(3*motortime);
+            full_turn_left_blocking(5*motortime);
           } else {
             half_forward(motortime);
           } 
