@@ -85,8 +85,19 @@ void reverse_left(int timedelay) {
   nonBlockingMotorAction(timedelay, half_reverse_speed, full_reverse_speed);
 }
 
+void reverse_left_blocking(int timedelay) {
+  myservoA.writeMicroseconds(half_reverse_speed);
+  myservoB.writeMicroseconds(full_reverse_speed);
+  delay(timedelay);   
+}
 void reverse_right(int timedelay) {
   nonBlockingMotorAction(timedelay, full_reverse_speed, half_reverse_speed);
+}
+
+void reverse_right_blocking(int timedelay) {
+  myservoA.writeMicroseconds(full_reverse_speed);
+  myservoB.writeMicroseconds(half_reverse_speed);
+  delay(timedelay);  
 }
 
 void stop(int timedelay) {

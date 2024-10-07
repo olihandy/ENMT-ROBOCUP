@@ -34,6 +34,9 @@ void half_forward(int timedelay);
 void full_turn_right(int timedelay);
 void forward_right(int timedelay);
 
+void reverse_right_blocking(int timedelay);
+void reverse_left_blocking(int timedelay);
+
 void full_turn_right_blocking(int timedelay);
 void forward_right_right(int timedelay);
 

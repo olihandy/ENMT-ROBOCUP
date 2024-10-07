@@ -11,7 +11,7 @@ enum WallState {
 WallState currentWallState = TURN_TO_ORIENTATION;
 int FoundWall = 0;           
 int homeAngle = 225;        
-//int homeAngle = 135;
+// int homeAngle = 135;      //blue
 extern bool homeReached;
 extern int motortime;
 

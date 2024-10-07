@@ -219,8 +219,13 @@ void Navigation(void) {
           break;
 
         case LEFT_WALL_DETECTED:
-          forward_right(motortime);
-          break;
+          if (TopLeft < 100)
+          {
+            reverse_right_blocking(5*motortime);
+            full_turn_right_blocking(5* motortime);
+          } else {
+            forward_right(motortime);
+          }
 
         case SLAB_WALL_DETECTED:
           full_reverse(10 * motortime);
@@ -239,7 +244,15 @@ void Navigation(void) {
           break;
 
         case RIGHT_WALL_DETECTED:
-          forward_left(motortime);
+          if (TopRight < 100)
+          {
+            reverse_left_blocking(5*motortime);
+            full_turn_left_blocking(5* motortime);
+          } else {
+            forward_left(motortime);
+          }
+          
+
           break;
 
         case NO_WALL:

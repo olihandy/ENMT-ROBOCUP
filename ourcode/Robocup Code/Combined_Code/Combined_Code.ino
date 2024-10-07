@@ -33,6 +33,7 @@
 #include "ReturningHome.h"
 #include "DropWeights.h"
 
+extern int motortime;
 bool runProgram = true;
 extern bool ReadyToDrive;
 extern bool WeightDetected;
@@ -273,6 +274,9 @@ void returningHomeActions() {
   tRead_TOF.enable();
   tCheck_orientation.disable();
   tDrop_Weights.disable();
+  tPrint_states.disable();
+
+
 }
 //**********************************************************************************
 // Initialise the tasks for the scheduler
@@ -351,7 +355,7 @@ void loop() {
 
   if (runProgram) {
     int currentTime = millis() / 1000;
-    if (currentTime > 60) {
+    if (currentTime > 100) {
       TimeToGo = true;
     }
 
@@ -366,7 +370,7 @@ void loop() {
 
       case DRIVING:
       drivingActions();
-        if (TimeToGo) {
+        if (TimeToGo || NumWeightsCollected == 3) {
           currentState = RETURNING_HOME;
         }
         if (collect_weight) {
@@ -377,10 +381,8 @@ void loop() {
       case COLLECTING_WEIGHT:
 
         // Check if enough time has passed since the last collection or for the first collection
-        if (firstCollection || millis() - collectionStartTime >= collectionDelay) {
+        if (firstCollection || (millis() - collectionStartTime >= collectionDelay)) {
           firstCollection = false;  // Reset the first collection flag
-
-
           switch (collectionState) {
             case ZERO:
               if(NumWeightsCollected == 0) {
@@ -430,13 +432,19 @@ void loop() {
         returningHomeActions();
         if (homeReached) {
           full_forward_blocking(5*motortime);
-          stop(motortime);
+          stop_blocking(motortime);
           tDrop_Weights.enable();
           currentState = FINISHED;
         }
         break;
 
       case FINISHED:
+      if(currentTime < 110) {
+        NumWeightsCollected = 0;
+        full_reverse_blocking(15*motortime);
+        full_turn_left_blocking(15*motortime);
+        currentState = DRIVING;
+      }
         stopAllActions();
         break;
     }
