@@ -31,6 +31,7 @@
 #include "SensorBuffering.h"
 #include "WeightCollection.h"
 #include "ReturningHome.h"
+#include "DropWeights.h"
 
 bool runProgram = true;
 extern bool ReadyToDrive;
@@ -89,6 +90,7 @@ WeightsCollectedState collectionState = ZERO;
 #define RETURN_HOME_TASK_PERIOD             500
 #define COLOUR_COMPARE_TASK_PERIOD          50
 #define COLOUR_START_TASK_PERIOD            50
+#define DROP_WEIGHTS_TASK_PERIOD            1000
 
 // Task execution amount definitions
 // -1 means indefinitely
@@ -110,6 +112,7 @@ WeightsCollectedState collectionState = ZERO;
 #define RETURN_HOME_NUM_EXECUTE                -1
 #define COLOUR_COMPARE_NUM_EXECTUTE            -1
 #define COLOUR_START_NUM_EXECUTE               -1
+#define DROP_WEIGHTS_NUM_EXECUTE               -1
 
 
 
@@ -149,8 +152,8 @@ Task tCollect_weight_2(COLLECT_WEIGHT_2_TASK_PERIOD,              COLLECT_WEIGHT
 Task tCollect_weight_3(COLLECT_WEIGHT_3_TASK_PERIOD,              COLLECT_WEIGHT_3_NUM_EXECUTE,             &CollectWeight_3);
 Task tReturn_home(RETURN_HOME_TASK_PERIOD,                        RETURN_HOME_NUM_EXECUTE,                  &return_home);
 Task tColour_compare(COLOUR_COMPARE_TASK_PERIOD,                  COLOUR_COMPARE_NUM_EXECTUTE,              &ColorCompareHome);
-Task tColour_start(COLOUR_START_TASK_PERIOD,                       COLOUR_START_NUM_EXECUTE,                &colorStart);
-
+Task tColour_start(COLOUR_START_TASK_PERIOD,                      COLOUR_START_NUM_EXECUTE,                 &colorStart);
+Task tDrop_Weights(DROP_WEIGHTS_TASK_PERIOD,                      DROP_WEIGHTS_NUM_EXECUTE,                 &drop_weights);
 
 
 Scheduler taskManager;
@@ -224,6 +227,7 @@ void stopAllActions() {
   tReturn_home.disable();
   tColour_compare.disable();  
   tColour_start.disable();
+  tDrop_Weights.disable();
 }
 
 void startingActions() {
@@ -244,7 +248,8 @@ void startingActions() {
   tCollect_weight_3.disable();
   tReturn_home.disable();
   tColour_compare.enable();
-  tColour_start.enable();  
+  tColour_start.enable();
+  tDrop_Weights.disable();  
 
 }
 
@@ -267,6 +272,7 @@ void returningHomeActions() {
   tPrint_information.disable();
   tRead_TOF.enable();
   tCheck_orientation.disable();
+  tDrop_Weights.disable();
 }
 //**********************************************************************************
 // Initialise the tasks for the scheduler
@@ -294,6 +300,7 @@ void task_init() {
   taskManager.addTask(tReturn_home);
   taskManager.addTask(tColour_compare);
   taskManager.addTask(tColour_start);
+  taskManager.addTask(tDrop_Weights);
 
 
   // Enable the tasks
@@ -315,6 +322,7 @@ void task_init() {
   tReturn_home.enable();
   tColour_compare.enable();
   tColour_start.enable();
+  tDrop_Weights.enable();
 
   Serial.println("Tasks have been initialised \n");
 }
@@ -423,6 +431,7 @@ void loop() {
         if (homeReached) {
           full_forward_blocking(5*motortime);
           stop(motortime);
+          tDrop_Weights.enable();
           currentState = FINISHED;
         }
         break;
