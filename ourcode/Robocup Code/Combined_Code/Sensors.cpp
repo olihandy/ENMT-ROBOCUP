@@ -56,10 +56,11 @@ VL53L0X sensorsL0[sensorCountL0];
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
 const int ColorSensorPin = 41;
 uint16_t colorlist[4];
+uint16_t clear_Start;
 uint16_t red_Start;
 uint16_t green_Start;
 uint16_t blue_Start;
-uint16_t clear_Start;
+
 
 uint16_t TOFreadings[numReadings];
 bool electromagnetStates[numElectroMagnets];
@@ -142,10 +143,6 @@ void setupSensors() {
     Serial.println("No TCS34725 found ... check your connections");
     while (1); // halt!
   }
-
-  // Take initial color reading and store as starting color
-  colorSensorDetect(colorlist);  // Read the initial color
-  colorStart();  // Save the starting color values
 }
 
 void colorSensorDetect(uint16_t* returnlist) {
@@ -170,21 +167,20 @@ void colorSensorDetect(uint16_t* returnlist) {
 }
 
 void colorStart() {
+  colorSensorDetect(colorlist);  // Read the initial color
   clear_Start = colorlist[0];
   red_Start = colorlist[1];
   green_Start = colorlist[2];
   blue_Start = colorlist[3]; 
-
-  Serial.print(colorlist[0]);
-  Serial.print(colorlist[1]);
-  Serial.print(colorlist[2]);
-  Serial.print(colorlist[3]);
+  Serial.print(colorlist[0]); Serial.print(" ");Serial.print(colorlist[1]); Serial.print(" ");Serial.print(colorlist[2]); Serial.print(" ");Serial.print(colorlist[3]); Serial.print(" ");
 }
 
 bool ColorCompareHome() {
+  colorSensorDetect(colorlist);
+  Serial.print(colorlist[0]); Serial.print(" ");Serial.print(colorlist[1]); Serial.print(" ");Serial.print(colorlist[2]); Serial.print(" ");Serial.print(colorlist[3]); Serial.print(" ");
   // Define separate tolerances for clear and colors
-  const int clearTolerance = 0;  // Higher tolerance for clear channel
-  const int colorTolerance = 0;   // Tighter tolerance for RGB channels
+  const int clearTolerance = 30;  // Higher tolerance for clear channel
+  const int colorTolerance = 15;   // Tighter tolerance for RGB channels
 
   // Array of starting colors and current colors for comparison
   uint16_t startColors[] = {clear_Start, red_Start, green_Start, blue_Start};
@@ -194,7 +190,6 @@ bool ColorCompareHome() {
   // Loop through each color and compare with the starting color
   for (int i = 0; i < 4; i++) {
     int difference = abs(colorlist[i] - startColors[i]);
-    Serial.print("asd");
     if (difference > tolerances[i]) {
       Serial.print(colorNames[i]);
       Serial.print(" value is out of tolerance by ");
@@ -239,7 +234,6 @@ void GetInduction(void) {
 
 void PrintInformation() {
     elapsed_time = millis() / 1000;
-
     if (ColorCompareHome()) {
       Serial.println("Color matches the starting color.");
     } else {

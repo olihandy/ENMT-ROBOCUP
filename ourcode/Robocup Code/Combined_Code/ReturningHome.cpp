@@ -1,71 +1,122 @@
 #include "ReturningHome.h"
 
-int FoundWall = 0;           // State to detect if the robot found a wall
-int StartingAngle = 0;       // Starting angle (robot's orientation when it starts)
-extern bool homeReached;     // Flag to check if the home base is reached
+// State definitions for wall detection and robot actions
+enum WallState {
+  TURN_TO_ORIENTATION,  // 0 - Correct orientation towards home
+  DRIVE_FORWARD,        // 1 - Drive forward until a wall is found
+  FOLLOW_WALL,          // 2 - Follow the wall (left, right, or none)
+  NO_WALL_REORIENT      // 3 - No wall, reorient and move forward
+};
+
+WallState currentWallState = TURN_TO_ORIENTATION;
+int FoundWall = 0;           
+int homeAngle = 225;        
+// int homeAngle = 135;
+extern bool homeReached;
+extern int motortime;
+
+
 uint16_t Middle = averagedTOFreadings[0];
 uint16_t Left = averagedTOFreadings[1];
 uint16_t Right = averagedTOFreadings[2];
 
+
 void return_home(void) {
-  // Update TOF sensor readings
+
   Middle = averagedTOFreadings[0];
   Left = averagedTOFreadings[1];
   Right = averagedTOFreadings[2];
 
+
   if (!homeReached) {
-    // Homing logic when wall is not found
-    if (FoundWall == 0) {
-      if (Right > 200 && Left > 200) { // If no walls are detected
-        int robot_orientation = ori[0]; // Use IMU orientation data (ori[0])
-
-        int homing_angle = 360 - robot_orientation; // Homing angle calculation
-        if (homing_angle < 0) homing_angle += 360;  // Keep homing angle within bounds
-        else if (homing_angle >= 360) homing_angle -= 360;
-
-        // Adjust robot heading towards home
-        if (homing_angle > 10) {
-          full_turn_left(motortime);  // Turn left if homing angle is large
-        } else if (homing_angle < -10) {
-          full_turn_right(motortime); // Turn right if homing angle is large
+    switch (currentWallState) {
+      case TURN_TO_ORIENTATION: {
+        // Correct the orientation of the robot towards home angle
+        int robot_orientation = ori[0];
+        if (robot_orientation > (homeAngle + 5)) {
+          full_turn_left(motortime);
+        } else if (robot_orientation < (homeAngle - 5)) {
+          full_turn_right(motortime);
         } else {
-          full_forward(motortime);    // Move forward if close to the home angle
+          currentWallState = DRIVE_FORWARD;
         }
-      } else if (Right < 200 && Middle < 500) { // Detected wall ahead
-        full_turn_left(motortime);  // Turn left when close to a right wall
-      } else if (Left < 200 && Middle < 500) { // Detected wall ahead
-        full_turn_right(motortime); // Turn right when close to a left wall
+        break;
       }
 
-      // If a wall is found, update FoundWall state
-      if ((Right < 300) && (Middle > 500)) {
-        FoundWall = 1;  // Detected right wall
-      } else if ((Left < 300) && (Middle > 500)) {
-        FoundWall = 2;  // Detected left wall
+      case DRIVE_FORWARD: {
+        full_forward(motortime);
+        if ((Right < 300) && (Middle > 500)) {
+          FoundWall = 1;  // Detected right wall
+          currentWallState = FOLLOW_WALL;  // Transition to follow right wall
+        } else if ((Left < 300) && (Middle > 500)) {
+          FoundWall = 2;  // Detected left wall
+          currentWallState = FOLLOW_WALL;  // Transition to follow left wall
+        } else if (Middle <= 500) {
+          FoundWall = 0;  // No wall detected, just keep driving forward
+        }
+        break;
       }
 
-    } else if (FoundWall == 1 || FoundWall == 2) {
-      // Wall-following logic after a wall is detected
-      full_forward(motortime);
+      case FOLLOW_WALL: {
+        if (FoundWall == 1) {  // Following the right wall
+          // Stay close to the right wall
+          if (Right > 300) {  // Too far from the right wall
+            if (Left > 500) {
+              forward_right(motortime);  // Turn slightly towards the right wall
+            } else {
+              full_turn_left(motortime);  // Correct by turning left
+            }
+          } else if (Right < 150) {  // Too close to the right wall
+            forward_left(motortime);  // Turn slightly away from the wall
+          }
 
-      if (FoundWall == 1) { // Following the right wall
-        if (Right > 30) {
-          full_turn_right(motortime); // Keep a safe distance from the right wall
-        } else if (Right < 5) {
-          full_turn_left(motortime);  // Turn away if too close to the wall
+          // Obstacle detected in front
+          if (Middle < 300) {
+            // Obstacle ahead, turn left 90 degrees to continue following the right wall
+            full_turn_left(motortime); 
+          }
+
+        } else if (FoundWall == 2) {  // Following the left wall
+          // Stay close to the left wall
+          if (Left > 300) {  // Too far from the left wall
+            if (Right > 500) {
+              forward_left(motortime);  // Turn slightly towards the left wall
+            } else {
+              full_turn_right(motortime);  // Correct by turning right
+            }
+          } else if (Left < 150) {  // Too close to the left wall
+            forward_right(motortime);  // Turn slightly away from the wall
+          }
+
+          // Obstacle detected in front
+          if (Middle < 300) {
+            // Obstacle ahead, turn right 90 degrees to continue following the left wall
+            full_turn_right(motortime);
+          }
+
+        } else if (FoundWall == 3) {  // No wall detected
+          currentWallState = NO_WALL_REORIENT;  // Transition to reorientation state
         }
-      } else if (FoundWall == 2) { // Following the left wall
-        if (Left > 30) {
-          full_turn_left(motortime); // Keep a safe distance from the left wall
-        } else if (Left < 5) {
-          full_turn_right(motortime); // Turn away if too close to the wall
+
+        break;
+      }
+
+      case NO_WALL_REORIENT: {
+        int robot_orientation = ori[0];
+        if (robot_orientation > (homeAngle + 5)) {
+          full_turn_left(motortime);
+        } else if (robot_orientation < (homeAngle - 5)) {
+          full_turn_right(motortime);
+        } else {
+          full_forward(motortime);
+          currentWallState = DRIVE_FORWARD;
         }
+        break;
       }
     }
 
-    // Check if the robot has reached home based on color detection
     if (ColorCompareHome()) {
-      homeReached = true; // Set flag when the robot reaches home
+      homeReached = true;
     }
   }
 }
