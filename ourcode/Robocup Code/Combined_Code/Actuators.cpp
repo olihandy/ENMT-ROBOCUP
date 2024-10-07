@@ -103,6 +103,12 @@ void full_forward(int timedelay) {
   nonBlockingMotorAction(timedelay, full_forward_speed, full_forward_speed);
 }
 
+void full_forward_blocking(int timedelay) {
+  myservoA.writeMicroseconds(full_forward_speed);
+  myservoB.writeMicroseconds(full_forward_speed);
+  delay(timedelay);
+}
+
 void half_forward(int timedelay) {
   nonBlockingMotorAction(timedelay, half_forward_speed, half_forward_speed);
 }
@@ -117,6 +123,11 @@ void full_turn_right(int timedelay) {
   nonBlockingMotorAction(timedelay, full_reverse_speed, full_forward_speed);
 }
 
+void full_turn_right_blocking(int timedelay) {
+  myservoA.writeMicroseconds(full_reverse_speed);
+  myservoB.writeMicroseconds(full_forward_speed);
+  delay(timedelay);   
+}
 void forward_right(int timedelay) {
   nonBlockingMotorAction(timedelay, half_forward_speed, full_forward_speed);
 }

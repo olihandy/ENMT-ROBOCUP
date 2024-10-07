@@ -27,14 +27,19 @@ void reverse_right(int timedelay);
 void stop(int timedelay);
 void stop_blocking(int timedelay);
 void full_forward(int timedelay);
+void full_forward_blocking(int timedelay);
+
 void half_forward_blocking(int timedelay);
 void half_forward(int timedelay);
 void full_turn_right(int timedelay);
 void forward_right(int timedelay);
+
+void full_turn_right_blocking(int timedelay);
 void forward_right_right(int timedelay);
 
 void full_turn_left(int timedelay);
 void full_turn_left_blocking(int timedelay);
+
 void forward_left(int timedelay);
 void forward_left_left(int timedelay);
 

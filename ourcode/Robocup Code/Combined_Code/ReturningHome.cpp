@@ -22,7 +22,7 @@ uint16_t Right = averagedTOFreadings[2];
 
 
 void return_home(void) {
-
+  Serial.print(currentWallState);
   Middle = averagedTOFreadings[0];
   Left = averagedTOFreadings[1];
   Right = averagedTOFreadings[2];
@@ -45,53 +45,46 @@ void return_home(void) {
 
       case DRIVE_FORWARD: {
         full_forward(motortime);
-        if ((Right < 300) && (Middle > 500)) {
+        if ((Right < 300)) {
           FoundWall = 1;  // Detected right wall
           currentWallState = FOLLOW_WALL;  // Transition to follow right wall
-        } else if ((Left < 300) && (Middle > 500)) {
+        } else if ((Left < 300)) {
           FoundWall = 2;  // Detected left wall
           currentWallState = FOLLOW_WALL;  // Transition to follow left wall
-        } else if (Middle <= 500) {
+        } else {
           FoundWall = 0;  // No wall detected, just keep driving forward
         }
         break;
       }
 
       case FOLLOW_WALL: {
-        if (FoundWall == 1) {  // Following the right wall
-          // Stay close to the right wall
-          if (Right > 300) {  // Too far from the right wall
-            if (Left > 500) {
-              forward_right(motortime);  // Turn slightly towards the right wall
-            } else {
-              full_turn_left(motortime);  // Correct by turning left
-            }
-          } else if (Right < 150) {  // Too close to the right wall
+        if (FoundWall == 1) {  // Right wall
+          if (Right > 350) {  // Too far from the right wall
+            forward_right(motortime);  // Turn slightly towards the wall
+          } else if (Right < 200) {  // Too close to the right wall
             forward_left(motortime);  // Turn slightly away from the wall
+          } else {
+            full_forward(motortime);  // Move forward
           }
 
           // Obstacle detected in front
           if (Middle < 300) {
-            // Obstacle ahead, turn left 90 degrees to continue following the right wall
-            full_turn_left(motortime); 
+            full_turn_left_blocking(10 * motortime);  // Turn left 90 degrees to avoid obstacle
           }
 
-        } else if (FoundWall == 2) {  // Following the left wall
+        } else if (FoundWall == 2) {  // Left wall
           // Stay close to the left wall
-          if (Left > 300) {  // Too far from the left wall
-            if (Right > 500) {
-              forward_left(motortime);  // Turn slightly towards the left wall
-            } else {
-              full_turn_right(motortime);  // Correct by turning right
-            }
-          } else if (Left < 150) {  // Too close to the left wall
+          if (Left > 350) {  // Too far from the left wall
+            forward_left(motortime);  // Turn slightly towards the wall
+          } else if (Left < 200) {  // Too close to the left wall
             forward_right(motortime);  // Turn slightly away from the wall
+          } else {
+            full_forward(motortime);  // Move forward
           }
 
           // Obstacle detected in front
           if (Middle < 300) {
-            // Obstacle ahead, turn right 90 degrees to continue following the left wall
-            full_turn_right(motortime);
+            full_turn_right_blocking(10 * motortime);  // Turn right 90 degrees to avoid obstacle
           }
 
         } else if (FoundWall == 3) {  // No wall detected

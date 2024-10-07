@@ -172,12 +172,10 @@ void colorStart() {
   red_Start = colorlist[1];
   green_Start = colorlist[2];
   blue_Start = colorlist[3]; 
-  Serial.print(colorlist[0]); Serial.print(" ");Serial.print(colorlist[1]); Serial.print(" ");Serial.print(colorlist[2]); Serial.print(" ");Serial.print(colorlist[3]); Serial.print(" ");
 }
 
 bool ColorCompareHome() {
   colorSensorDetect(colorlist);
-  Serial.print(colorlist[0]); Serial.print(" ");Serial.print(colorlist[1]); Serial.print(" ");Serial.print(colorlist[2]); Serial.print(" ");Serial.print(colorlist[3]); Serial.print(" ");
   // Define separate tolerances for clear and colors
   const int clearTolerance = 30;  // Higher tolerance for clear channel
   const int colorTolerance = 15;   // Tighter tolerance for RGB channels

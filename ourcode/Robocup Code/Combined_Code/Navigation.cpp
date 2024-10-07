@@ -16,6 +16,7 @@ extern int NumWeightsCollected;
 extern bool finished_collecting;
 int LengthOfRobot = 35;
 int five_seconds = 5000;
+int ten_seconds = 10000;
 int NOCHANGETHRESHOLD = 5;
 int timeWeightDetected;
 unsigned long lastOrientationChangeTime = 0;
@@ -94,14 +95,14 @@ void checkOrientation(void) {
   }
 
   // Check if the orientation has changed significantly (beyond a small tolerance)
-  if (abs(yaw - lastOrientation) > 35.0) {
+  if (abs(yaw - lastOrientation) > 10.0) {
     // Reset the timer if orientation has changed
     lastOrientationChangeTime = millis();
     lastOrientation = yaw;
   }
 
   // If the robot has been facing the same direction for too long
-  if ((millis() - lastOrientationChangeTime) > five_seconds) {
+  if ((millis() - lastOrientationChangeTime) > ten_seconds) {
     // Time to turn around
     full_turn_left_blocking(100*motortime);
     Serial.println("No direction change detected, turning");
@@ -250,12 +251,19 @@ void Navigation(void) {
       break;
 
     case WEIGHT_CONFIRMED:
-      collect_weight = true;
-      weightState = WEIGHT_NOT_DETECTED;
+      if(TopMiddle < 300) {
+        if(TopLeft > TopRight) {
+          full_turn_left_blocking(5*motortime);
+        } else {
+          full_turn_right_blocking(5*motortime);
+        }
+      } else {
+        collect_weight = true;
+        weightState = WEIGHT_NOT_DETECTED;
+      }
       break;
+    }
   }
-
-}
 
 
 
