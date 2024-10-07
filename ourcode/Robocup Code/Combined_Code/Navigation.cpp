@@ -21,7 +21,7 @@ bool collect_weight = false;
 extern int NumWeightsCollected;
 
 extern bool finished_collecting;
-int LengthOfRobot = 35;
+int LengthOfRobot = 350;
 int five_seconds = 5000;
 int ten_seconds = 10000;
 int NOCHANGETHRESHOLD = 5;
