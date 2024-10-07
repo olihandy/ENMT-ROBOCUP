@@ -96,7 +96,6 @@ void setupSensors() {
   Wire.setClock(400000);  // use 400 kHz I2C
   Wire1.begin();
   Wire1.setClock(400000);  // use 400 kHz I2C
-  Wire2.begin();
 
   // Disable/reset all sensors by driving their XSHUT pins low.
   for (uint8_t i = 0; i < sensorCountL1; i++) {

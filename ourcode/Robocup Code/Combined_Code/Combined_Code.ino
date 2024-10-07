@@ -7,7 +7,6 @@
  *  for controlling how frequently tasks sholud run
  *  
  *  
- *  written by: Logan Chatfield, Ben Fortune, Lachlan McKenzie, Jake Campbell
  *  
  ******************************************************************************/
 
@@ -33,7 +32,7 @@
 #include "WeightCollection.h"
 #include "ReturningHome.h"
 
-bool runProgram = false;
+bool runProgram = true;
 extern bool ReadyToDrive;
 extern bool WeightDetected;
 extern int NumWeightsCollected;
@@ -157,8 +156,10 @@ Scheduler taskManager;
 void pin_init();
 void task_init();
 void stopAllActions();
-
+void startingActions();
 void competition_init();
+void drivingActions();
+void returningHomeActions();
 
 //**********************************************************************************
 // put your setup code here, to run once:
@@ -169,10 +170,12 @@ void setup() {
   setupActuators();
   setup_IMU();
   setupSensors();
-  int_init();
+  // int_init();
   task_init();
-  Wire.begin();
   Serial.println("System Initialised");
+  while(!digitalRead(STARTBUT)) {
+    delay(1);
+  }
 }
 
 //**********************************************************************************
@@ -188,13 +191,13 @@ void pin_init(){
 }
 
 
-void toggle_prog_ISR() {
-  runProgram = !runProgram;
-}
+// void toggle_prog_ISR() {
+//   runProgram = !runProgram;
+// }
 
-void int_init() {
-  attachInterrupt(digitalPinToInterrupt(STARTBUT), toggle_prog_ISR, FALLING);
-}
+// void int_init() {
+//   attachInterrupt(digitalPinToInterrupt(STARTBUT), toggle_prog_ISR, FALLING);
+// }
 
 void stopAllActions() {
   tRead_TOF.disable();
@@ -215,7 +218,36 @@ void stopAllActions() {
   tReturn_home.disable();
 }
 
+void startingActions() {
+  tRead_TOF.enable();
+  tRead_electromagnet.enable();
+  tRead_inductive.enable();
+  tIMU_update.enable();
+  tUpdate_wall_state.enable();
+  tUpdate_weight_state.enable();
+  tCheck_orientation.enable();
+  tCheck_sensor_updates.enable();
+  tNavigation.disable();
+  tIMU_print.enable();
+  tPrint_information.enable();
+  tPrint_states.enable();
+  tCollect_weight_1.disable();
+  tCollect_weight_2.disable();
+  tCollect_weight_3.disable();
+  tReturn_home.disable();
+}
 
+void drivingActions() {
+  tNavigation.enable();
+}
+
+
+void returningHomeActions() {
+  tNavigation.disable();
+  tUpdate_wall_state.disable();
+  tUpdate_weight_state.disable();
+  tReturn_home.enable();
+}
 //**********************************************************************************
 // Initialise the tasks for the scheduler
 //**********************************************************************************
@@ -273,14 +305,15 @@ void competition_init() {
 // put your main code here, to run repeatedly
 //**********************************************************************************
 void loop() {
-  static unsigned long collectionStartTime = 0;  // Time when the current collection started
-  const unsigned long collectionDelay = 100;  // 5-second delay between state transitions
-  static bool firstCollection = true;  // Track if it's the first collection to start the timer
+  static unsigned long collectionStartTime = 0;
+  const unsigned long collectionDelay = 100;
+  static bool firstCollection = true;
 
-  int start_time = millis();
-  checkOrientation();
-  int end_time = millis();
-  Serial.println(end_time-start_time);
+  // int start_time = millis();
+  // checkOrientation();
+  // int end_time = millis();
+  // Serial.println(end_time-start_time);
+
 
   if (runProgram) {
     int currentTime = millis() / 1000;
@@ -290,13 +323,7 @@ void loop() {
 
     switch (currentState) {
       case STARTING:
-        // Initialize navigation actions and disable unnecessary tasks
-        tReturn_home.disable();
-        tCollect_weight_1.disable();
-        tCollect_weight_2.disable();
-        tCollect_weight_3.disable();
-        tNavigation.enable();
-
+        startingActions();
         ReadyToDrive = true;
         if (ReadyToDrive) {
           currentState = DRIVING;
@@ -304,6 +331,7 @@ void loop() {
         break;
 
       case DRIVING:
+      drivingActions();
         if (TimeToGo) {
           currentState = RETURNING_HOME;
         }
@@ -318,7 +346,7 @@ void loop() {
         if (firstCollection || millis() - collectionStartTime >= collectionDelay) {
           firstCollection = false;  // Reset the first collection flag
 
-          // Enable the appropriate collection task based on the collectionState
+
           switch (collectionState) {
             case ZERO:
               if(NumWeightsCollected == 0) {
@@ -352,7 +380,6 @@ void loop() {
 
           // After each weight collection, check if a weight was collected
           if (NumWeightsCollected > static_cast<int>(collectionState)) {
-            // Move to the next collection state only if a weight has been successfully collected
             if (collectionState < THREE) {
               collectionState = static_cast<WeightsCollectedState>(collectionState + 1);
               collectionStartTime = millis(); // Reset the timer after collecting a weight
@@ -366,32 +393,21 @@ void loop() {
         break;
 
       case RETURNING_HOME:
-        // Disable all navigation and weight collection tasks
-        tNavigation.disable();
-        tUpdate_wall_state.disable();
-        tUpdate_weight_state.disable();
-        tReturn_home.enable();  // Enable return home task
-
-        // Once home is reached, finish the process
+        returningHomeActions();
         if (homeReached) {
           currentState = FINISHED;
         }
         break;
 
       case FINISHED:
-        // Stop all actions
         stopAllActions();
         break;
     }
-
-    // Execute the task manager
     taskManager.execute();
   } else {
-    // If the program is not running, stop and reset variables
     stop(10);
     NumWeightsCollected = 0;
-    tNavigation.disable();
-    tCheck_orientation.disable();
-    tCheck_sensor_updates.disable();
+    currentState = STARTING;
+    stopAllActions();
   }
 }

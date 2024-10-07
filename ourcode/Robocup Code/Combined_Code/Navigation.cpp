@@ -89,7 +89,7 @@ void checkOrientation(void) {
   pitch = ori[2];
 
   if(abs(pitch) > 5) {
-    full_reverse_blocking(motortime);
+    full_reverse_blocking(5*motortime);
     Serial.print("REVERSING");
   }
 
