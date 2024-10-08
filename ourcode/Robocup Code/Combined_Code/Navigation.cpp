@@ -145,6 +145,9 @@ void UpdateWallState(void) {
   }
 }
 
+unsigned long lastWeightConfirmTime = 0;  // To track time when weight was confirmed
+const unsigned long weightConfirmDuration = 1000;  // 1 seconds for weight state reset
+
 void UpdateWeightState(void) {
   TopMiddle = averagedTOFreadings[0];
   TopLeft = averagedTOFreadings[1];
@@ -154,20 +157,34 @@ void UpdateWeightState(void) {
   BottomLeft = averagedTOFreadings[5];
   BottomRight = averagedTOFreadings[6];
   FrontInduction = !digitalRead(FrontInductionPin);
+
+  Serial.print(FrontInduction);
   
+  // Handle weight confirmed state
+  if (weightState == WEIGHT_CONFIRMED) {
+    if (millis() - lastWeightConfirmTime >= weightConfirmDuration) {
+      // Reset weight state to WEIGHT_NOT_DETECTED after 1 seconds
+      weightState = WEIGHT_NOT_DETECTED;
+    }
+    return;  // Skip other checks while in WEIGHT_CONFIRMED
+  }
+
+  // Handle other states
   if (FrontInduction) {
     if (weightState != WEIGHT_CONFIRMED) {
       weightState = WEIGHT_CONFIRMED;
+      lastWeightConfirmTime = millis();  // Record the time when weight was confirmed
+      Serial.println("Weight confirmed.");
     }
   } else if (weightState != WEIGHT_CONFIRMED) {
-    if (((MiddleRight > (BottomRight + 200))) ^ (MiddleLeft > (BottomLeft + 200))) {
+    if (((MiddleRight > (BottomRight + 400))) ^ (MiddleLeft > (BottomLeft + 400))) {
       weightState = WEIGHT_DETECTED;
     } else {
       weightState = WEIGHT_NOT_DETECTED;
     }
   }
-
 }
+
 
 
 //--------------------------------------------------------------------------------------------------------//

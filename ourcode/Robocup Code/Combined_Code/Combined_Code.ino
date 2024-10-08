@@ -81,17 +81,17 @@ WeightsCollectedState collectionState = ZERO;
 #define READ_ELECTROMAGNET_TASK_PERIOD      10     // Takes 0 ms
 #define READ_INDUCTIVE_TASK_PERIOD          10     // Takes 0 ms
 #define IMU_UPDATE_TASK_PERIOD              50       //Takes 2 ms
-#define WALL_UPDATE_TASK_PERIOD             50     //Takes 0ms
-#define WEIGHT_UPDATE_TASK_PERIOD           50     //Takes 0ms?
+#define WALL_UPDATE_TASK_PERIOD             20     //Takes 0ms
+#define WEIGHT_UPDATE_TASK_PERIOD           20     //Takes 0ms?
 #define CHECK_ORIENTATION_TASK_PERIOD       50     //Takes 0ms?
 #define CHECK_SENSOR_UPDATES_TASK_PERIOD    50     //Takes 0ms?
 #define NAVIGATION_TASK_PERIOD              50    //Takes 100 ms?
 #define PRINT_IMU_TASK_PERIOD               500       //Takes 0ms?
 #define PRINT_INFORMATION_TASK_PERIOD       200     //Takes 130 ms
 #define PRINT_STATES_TASK_PERIOD            200     //Takes 0 ms? 
-#define COLLECT_WEIGHT_1_TASK_PERIOD        500
-#define COLLECT_WEIGHT_2_TASK_PERIOD        500
-#define COLLECT_WEIGHT_3_TASK_PERIOD        500
+#define COLLECT_WEIGHT_1_TASK_PERIOD        1000
+#define COLLECT_WEIGHT_2_TASK_PERIOD        1000
+#define COLLECT_WEIGHT_3_TASK_PERIOD        1000
 #define RETURN_HOME_TASK_PERIOD             50
 #define COLOUR_COMPARE_TASK_PERIOD          50
 #define COLOUR_START_TASK_PERIOD            50
@@ -254,6 +254,9 @@ void startingActions() {
 void drivingActions() {
   tNavigation.enable();
   tColour_start.disable();
+  tIMU_print.disable();
+  tPrint_information.disable();
+  tPrint_states.disable();  
 }
 
 
@@ -271,6 +274,28 @@ void returningHomeActions() {
   tCheck_orientation.disable();
   tDrop_Weights.disable();
   tPrint_states.disable();
+}
+
+void collectionActions() {
+  tRead_TOF.disable();
+  tRead_electromagnet.disable();
+  tRead_inductive.enable();
+  tIMU_update.enable();
+  tUpdate_wall_state.disable();
+  tUpdate_weight_state.enable();
+  tCheck_orientation.disable();
+  tCheck_sensor_updates.disable();
+  tNavigation.disable();
+  tIMU_print.disable();
+  tPrint_information.enable();
+  tPrint_states.disable();
+  tCollect_weight_1.disable();
+  tCollect_weight_2.disable();
+  tCollect_weight_3.disable();
+  tReturn_home.disable();
+  tColour_compare.disable();  
+  tColour_start.disable();
+  tDrop_Weights.disable(); 
 }
 //**********************************************************************************
 // Initialise the tasks for the scheduler
@@ -344,10 +369,10 @@ void loop() {
 
   int currentTime = millis() / 1000 - start_time ;
 
-  int start_time2 = millis();
-  GetTOF();
-  int end_time = millis();
-  Serial.println(end_time-start_time2);
+  // int start_time2 = millis();
+  // GetTOF();
+  // int end_time = millis();
+  // Serial.println(end_time-start_time2);
 
   if(actionInProgress) {
     tNavigation.disable();
@@ -357,7 +382,7 @@ void loop() {
 
   if (runProgram) {
     // Serial.println(currentTime);
-    if (currentTime >300 ||NumWeightsCollected == 3) {
+    if (currentTime >90 ||NumWeightsCollected == 3) {
       TimeToGo = true;
     }
 
@@ -382,8 +407,7 @@ void loop() {
         break;
 
       case COLLECTING_WEIGHT:
-
-        // Check if enough time has passed since the last collection or for the first collection
+      collectionActions();
         if (firstCollection || (millis() - collectionStartTime >= collectionDelay)) {
           firstCollection = false;  // Reset the first collection flag
           switch (collectionState) {
