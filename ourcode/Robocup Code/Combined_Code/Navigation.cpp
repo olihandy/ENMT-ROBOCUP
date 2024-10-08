@@ -226,9 +226,9 @@ void Navigation(void) {
 
         case SLAB_WALL_DETECTED:
           if(TopLeft > TopRight) {
-            reverseThenTurnLeft(10*motortime,10*motortime);
+            reverseThenTurnLeft(10*motortime,40*motortime);
           } else {
-            reverseThenTurnRight(10*motortime,10*motortime);
+            reverseThenTurnRight(10*motortime,40*motortime);
           }
           reverseCount++;
           lastReverseTime = elapsed_time;

@@ -202,8 +202,8 @@ void GetTOF(void) {
 
   // Update circular buffers
   writeCircBuf(&TOFbuffer0, sensorsL1[0].read(false));
-  writeCircBuf(&TOFbuffer1, sensorsL1[1].read(false));
-  writeCircBuf(&TOFbuffer2, sensorsL1[2].read(false));
+  writeCircBuf(&TOFbuffer1, sensorsL1[1].read(false) + 10);
+  writeCircBuf(&TOFbuffer2, sensorsL1[2].read(false) - 10);
   writeCircBuf(&TOFbuffer3, sensorsL0[0].readRangeContinuousMillimeters());
   writeCircBuf(&TOFbuffer4, sensorsL0[1].readRangeContinuousMillimeters());
   writeCircBuf(&TOFbuffer5, sensorsL0[2].readRangeContinuousMillimeters());
