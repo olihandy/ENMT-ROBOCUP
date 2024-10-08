@@ -357,7 +357,7 @@ void loop() {
   }
 
   if (runProgram) {
-    Serial.println(currentTime);
+    // Serial.println(currentTime);
     if (currentTime > 100) {
       TimeToGo = true;
     }

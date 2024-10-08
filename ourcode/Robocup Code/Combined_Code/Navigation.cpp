@@ -83,7 +83,6 @@ void CheckForSensorUpdates() {
   // If no sensor changes detected for the timeout duration, perform reverse navigation
   if ((elapsed_time - lastChangeTime) > timeoutDuration) {
     Serial.println("No sensor change detected for timeout duration. Executing reverse navigation.");
-    full_reverse(10 * motortime);    // Perform reverse
     full_turn_left(100 * motortime); // Perform turn
   }
 }
@@ -187,7 +186,8 @@ void Navigation(void) {
   BottomLeft = averagedTOFreadings[5];
   BottomRight = averagedTOFreadings[6];
 
-
+  forward_right(motortime);
+  Serial.println("FORWARD LEFT");
   // Check if enough time has passed since the last reverse to reset the counter
   if (elapsed_time - lastReverseTime > reverseTimeout) {
     reverseCount = 0;  // Reset reverse count after timeout
@@ -198,7 +198,11 @@ void Navigation(void) {
       collect_weight = false;
       switch (wallState) {
         case WALL_AHEAD:
-          full_reverse(motortime);
+          if(TopLeft > TopRight) {
+            reverse_right(100*motortime);
+          } else {
+            reverse_left(100*motortime);
+          }
           reverseCount++;  // Increment reverse counter
           lastReverseTime = elapsed_time;  // Update the last reverse time
 
@@ -215,11 +219,13 @@ void Navigation(void) {
           break;
 
         case LEFT_WALL_DETECTED:
-          if (TopLeft < 100)
-          {
-            reverse_left(100*motortime);
+          if (TopLeft < 100) {
+            Serial.println("BACKINGUP LEFT");
+            reverse_left(20*motortime);
           } else {
             forward_right(motortime);
+            Serial.println("FORWARD LEFT");
+
           }
 
         case SLAB_WALL_DETECTED:
@@ -239,14 +245,14 @@ void Navigation(void) {
           break;
 
         case RIGHT_WALL_DETECTED:
-          if (TopRight < 100)
-          {
-            reverse_right(100*motortime);
+          if (TopRight < 100) {
+            Serial.println("BACKINGUP RIGHT");
+            reverse_right(20*motortime);
           } else {
             forward_left(motortime);
-          }
-          
+            Serial.println("FORWARD RIGHT");
 
+          }
           break;
 
         case NO_WALL:
@@ -258,19 +264,17 @@ void Navigation(void) {
 
     case WEIGHT_DETECTED:
       if (TopMiddle < 200) {
-        full_reverse(20 * motortime);
         reverseCount++;
         lastReverseTime = elapsed_time;
         if (reverseCount >= reverseThreshold) {
           full_turn_right(180 * motortime);
           reverseCount = 0;
           Serial.println("Stuck in a loop. Performing 180-degree turn.");
-        }
 
         if (TopLeft > TopRight) {
-          full_turn_left(5 * motortime);
+          full_turn_left(20 * motortime);
         } else {
-          full_turn_right(5 * motortime);
+          full_turn_right(20 * motortime);
         }
       } else if (TopLeft < 100) {
         reverse_left(100*motortime);
@@ -311,7 +315,7 @@ void Navigation(void) {
       break;
   }
 }
-
+}
 
 
 
