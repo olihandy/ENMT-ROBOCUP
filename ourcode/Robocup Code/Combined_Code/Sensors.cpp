@@ -200,14 +200,41 @@ bool ColorCompareHome() {
 
 void GetTOF(void) {
 
-  // Update circular buffers
-  writeCircBuf(&TOFbuffer0, sensorsL1[0].read(false));
-  writeCircBuf(&TOFbuffer1, sensorsL1[1].read(false) + 10);
-  writeCircBuf(&TOFbuffer2, sensorsL1[2].read(false) - 10);
-  writeCircBuf(&TOFbuffer3, sensorsL0[0].readRangeContinuousMillimeters());
-  writeCircBuf(&TOFbuffer4, sensorsL0[1].readRangeContinuousMillimeters());
-  writeCircBuf(&TOFbuffer5, sensorsL0[2].readRangeContinuousMillimeters());
-  writeCircBuf(&TOFbuffer6, sensorsL0[3].readRangeContinuousMillimeters());
+  // Read sensor values
+  uint16_t topMiddleReading = sensorsL1[0].read(false);
+  uint16_t topLeftReading = sensorsL1[1].read(false) + 10;
+  uint16_t topRightReading = sensorsL1[2].read(false) - 10;
+  uint16_t middleLeftReading = sensorsL0[0].readRangeContinuousMillimeters();
+  uint16_t middleRightReading = sensorsL0[1].readRangeContinuousMillimeters();
+  uint16_t bottomLeftReading = sensorsL0[2].readRangeContinuousMillimeters();
+  uint16_t bottomRightReading = sensorsL0[3].readRangeContinuousMillimeters();
+
+  // If TopMiddle is NOT between 250 and 500
+  if (((topMiddleReading >= 250) && (topMiddleReading <= 500))) {
+    Serial.print("ahhh");
+    // Only write readings to the circular buffer that are not greater than 8100
+    if (middleLeftReading < 8100) {
+      writeCircBuf(&TOFbuffer3, middleLeftReading);
+    }
+    if (middleRightReading < 8100) {
+      writeCircBuf(&TOFbuffer4, middleRightReading);
+    }
+    if (bottomLeftReading < 8100) {
+      writeCircBuf(&TOFbuffer5, bottomLeftReading);
+    }
+    if (bottomRightReading < 8100) {
+      writeCircBuf(&TOFbuffer6, bottomRightReading);
+    }
+  } else {
+    writeCircBuf(&TOFbuffer3, middleLeftReading);
+    writeCircBuf(&TOFbuffer4, middleRightReading);
+    writeCircBuf(&TOFbuffer5, bottomLeftReading);
+    writeCircBuf(&TOFbuffer6, bottomRightReading);
+
+  }
+  writeCircBuf(&TOFbuffer0, topMiddleReading);  // Write modified TopMiddle
+  writeCircBuf(&TOFbuffer1, topLeftReading);    // Write TopLeft
+  writeCircBuf(&TOFbuffer2, topRightReading);   // Write TopRight
 
   // Calculate averaged values from circular buffers
   averagedTOFreadings[0] = averageCircBuf(&TOFbuffer0);
@@ -218,6 +245,8 @@ void GetTOF(void) {
   averagedTOFreadings[5] = averageCircBuf(&TOFbuffer5);
   averagedTOFreadings[6] = averageCircBuf(&TOFbuffer6);
 }
+
+ 
 
 void GetElectroMagnet(void) {
     electromagnetStates[0] = digitalRead(FrontElectromagnetPin);

@@ -87,8 +87,8 @@ WeightsCollectedState collectionState = ZERO;
 #define CHECK_SENSOR_UPDATES_TASK_PERIOD    50     //Takes 0ms?
 #define NAVIGATION_TASK_PERIOD              50    //Takes 100 ms?
 #define PRINT_IMU_TASK_PERIOD               500       //Takes 0ms?
-#define PRINT_INFORMATION_TASK_PERIOD       500     //Takes 130 ms
-#define PRINT_STATES_TASK_PERIOD            500     //Takes 0 ms? 
+#define PRINT_INFORMATION_TASK_PERIOD       200     //Takes 130 ms
+#define PRINT_STATES_TASK_PERIOD            200     //Takes 0 ms? 
 #define COLLECT_WEIGHT_1_TASK_PERIOD        500
 #define COLLECT_WEIGHT_2_TASK_PERIOD        500
 #define COLLECT_WEIGHT_3_TASK_PERIOD        500
@@ -237,7 +237,7 @@ void startingActions() {
   tCheck_orientation.enable();
   tCheck_sensor_updates.enable();
   tNavigation.disable();
-  tIMU_print.enable();
+  tIMU_print.disable();
   tPrint_information.enable();
   tPrint_states.enable();
   tCollect_weight_1.disable();
@@ -265,7 +265,7 @@ void returningHomeActions() {
   tColour_compare.enable();
   tColour_start.disable();
   tIMU_update.enable();
-  tIMU_print.enable();
+  tIMU_print.disable();
   tPrint_information.disable();
   tRead_TOF.enable();
   tCheck_orientation.disable();
@@ -344,10 +344,10 @@ void loop() {
 
   int currentTime = millis() / 1000 - start_time ;
 
-  // int start_time2 = millis();
-  // GetTOF();
-  // int end_time = millis();
-  // Serial.println(end_time-start_time2);
+  int start_time2 = millis();
+  GetTOF();
+  int end_time = millis();
+  Serial.println(end_time-start_time2);
 
   if(actionInProgress) {
     tNavigation.disable();
@@ -357,7 +357,7 @@ void loop() {
 
   if (runProgram) {
     // Serial.println(currentTime);
-    if (currentTime >100 ||NumWeightsCollected == 3) {
+    if (currentTime >300 ||NumWeightsCollected == 3) {
       TimeToGo = true;
     }
 

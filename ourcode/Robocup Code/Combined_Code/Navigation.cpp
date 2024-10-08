@@ -205,7 +205,6 @@ void Navigation(void) {
           if (reverseCount >= reverseThreshold) {
             full_turn_right(180*motortime);  // 180-degree turn
             reverseCount = 0;  // Reset reverse counter
-            Serial.println("Stuck in a loop. Performing 180-degree turn.");
           }
           break;
 
@@ -215,11 +214,9 @@ void Navigation(void) {
 
         case LEFT_WALL_DETECTED:
           if (TopLeft < 150) {
-            Serial.println("BACKINGUP RIGHT");
             reverse_right(20*motortime);
           } else {
             forward_right(motortime);
-            Serial.println("FORWARD RIGHT");
 
           }
           break;
@@ -235,7 +232,6 @@ void Navigation(void) {
           if (reverseCount >= reverseThreshold) {
             full_turn_right(180 * motortime);
             reverseCount = 0;
-            Serial.println("Stuck in a loop. Performing 180-degree turn.");
           }
           if (TopLeft > TopRight) {
             full_turn_left(20 * motortime);
@@ -246,11 +242,9 @@ void Navigation(void) {
 
         case RIGHT_WALL_DETECTED:
           if (TopRight < 150) {
-            Serial.println("BACKINGUP RIGHT");
             reverse_left(20*motortime);
           } else {
             forward_left(motortime);
-            Serial.println("FORWARD RIGHT");
 
           }
           break;
@@ -272,7 +266,6 @@ void Navigation(void) {
         if (reverseCount >= reverseThreshold) {
           full_turn_right(180 * motortime);
           reverseCount = 0;
-          Serial.println("Stuck in a loop. Performing 180-degree turn.");
         }
         if (TopLeft > TopRight) {
           full_turn_left(5 * motortime);
