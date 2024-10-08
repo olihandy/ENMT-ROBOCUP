@@ -278,10 +278,10 @@ void Navigation(void) {
         }
       } else if (TopLeft < 100) {
         full_reverse_blocking(5 * motortime);
-        full_turn_left_blocking(3 * motortime);
+        full_turn_right_blocking(3 * motortime);
       } else if (TopRight < 100) {
         full_reverse_blocking(5 * motortime);
-        full_turn_right_blocking(3 * motortime);
+        full_turn_left_blocking(3 * motortime);
       } else {
         if (BottomLeft < 400 || BottomRight < 400) {
           if (BottomLeft > (BottomRight + 50)) {
