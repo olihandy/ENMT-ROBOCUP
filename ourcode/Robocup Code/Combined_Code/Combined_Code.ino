@@ -78,7 +78,7 @@ WeightsCollectedState collectionState = ZERO;
 // Task period Definitions
 // ALL OF THESE VALUES WILL NEED TO BE SET TO SOMETHING USEFUL !!!!!!!!!!!!!!!!!!!!
 #define TOF_READ_TASK_PERIOD                40     //Takes 14 ms
-#define READ_ELECTROMAGNET_TASK_PERIOD      2     // Takes 0 ms
+#define READ_ELECTROMAGNET_TASK_PERIOD      20     // Takes 0 ms
 #define READ_INDUCTIVE_TASK_PERIOD          10     // Takes 0 ms
 #define IMU_UPDATE_TASK_PERIOD              50       //Takes 2 ms
 #define WALL_UPDATE_TASK_PERIOD             50     //Takes 0ms
@@ -92,7 +92,7 @@ WeightsCollectedState collectionState = ZERO;
 #define COLLECT_WEIGHT_1_TASK_PERIOD        500
 #define COLLECT_WEIGHT_2_TASK_PERIOD        500
 #define COLLECT_WEIGHT_3_TASK_PERIOD        500
-#define RETURN_HOME_TASK_PERIOD             50
+#define RETURN_HOME_TASK_PERIOD             10
 #define COLOUR_COMPARE_TASK_PERIOD          50
 #define COLOUR_START_TASK_PERIOD            50
 #define DROP_WEIGHTS_TASK_PERIOD            1000
@@ -238,7 +238,7 @@ void startingActions() {
   tNavigation.disable();
   tIMU_print.disable();
   tPrint_information.disable();
-  tPrint_states.disgiable();
+  tPrint_states.disable();
   tCollect_weight_1.disable();
   tCollect_weight_2.disable();
   tCollect_weight_3.disable();
@@ -259,7 +259,6 @@ void drivingActions() {
 
 
 void returningHomeActions() {
-  stop_blocking(10);
   tNavigation.disable();
   tUpdate_wall_state.disable();
   tUpdate_weight_state.disable();
@@ -374,7 +373,10 @@ void loop() {
 
       case DRIVING:
       drivingActions();
+      tDrop_Weights.disable();
+
         if (ColorCompareHome() && (NumWeightsCollected > 1)) {
+          stop_blocking(10);
           tNavigation.disable();
           tDrop_Weights.enable();
         }
@@ -413,6 +415,7 @@ void loop() {
                 tCollect_weight_3.enable(); // Enable task to collect the second weight
               } else {
                 tCollect_weight_3.disable();
+                stop(10);
                 currentState = RETURNING_HOME; // Move to returning home after collecting all weight
                 break;
               }
