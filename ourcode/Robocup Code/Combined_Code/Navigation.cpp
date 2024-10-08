@@ -52,7 +52,6 @@ uint16_t MiddleLeft = averagedTOFreadings[3];
 uint16_t MiddleRight = averagedTOFreadings[4];
 uint16_t BottomLeft = averagedTOFreadings[5];
 uint16_t BottomRight = averagedTOFreadings[6];
-bool BackInduction = !digitalRead(BackInductionPin);
 bool FrontInduction = !digitalRead(FrontInductionPin);
 
 extern float ori[2];
@@ -84,8 +83,8 @@ void CheckForSensorUpdates() {
   // If no sensor changes detected for the timeout duration, perform reverse navigation
   if ((elapsed_time - lastChangeTime) > timeoutDuration) {
     Serial.println("No sensor change detected for timeout duration. Executing reverse navigation.");
-    full_reverse_blocking(10 * motortime);    // Perform reverse
-    full_turn_left_blocking(100 * motortime); // Perform turn
+    full_reverse(10 * motortime);    // Perform reverse
+    full_turn_left(100 * motortime); // Perform turn
   }
 }
 
@@ -96,7 +95,7 @@ void checkOrientation(void) {
   pitch = ori[1];
 
   if(abs(pitch) > 5) {
-    full_reverse_blocking(5*motortime);
+    full_reverse(5*motortime);
     Serial.print("REVERSING");
   }
 
@@ -110,7 +109,7 @@ void checkOrientation(void) {
   // If the robot has been facing the same direction for too long
   if ((millis() - lastOrientationChangeTime) > ten_seconds) {
     // Time to turn around
-    full_turn_left_blocking(100*motortime);
+    full_turn_left(100*motortime);
     Serial.println("No direction change detected, turning");
     
     // After turning, reset the timer and the orientation
@@ -187,7 +186,6 @@ void Navigation(void) {
   MiddleRight = averagedTOFreadings[4];
   BottomLeft = averagedTOFreadings[5];
   BottomRight = averagedTOFreadings[6];
-  BackInduction = !digitalRead(BackInductionPin);  
 
 
   // Check if enough time has passed since the last reverse to reset the counter
@@ -206,7 +204,7 @@ void Navigation(void) {
 
           // If the robot has reversed too many times, perform a 180-degree turn
           if (reverseCount >= reverseThreshold) {
-            full_turn_right_blocking(15*motortime);  // 180-degree turn
+            full_turn_right(180*motortime);  // 180-degree turn
             reverseCount = 0;  // Reset reverse counter
             Serial.println("Stuck in a loop. Performing 180-degree turn.");
           }
@@ -219,33 +217,31 @@ void Navigation(void) {
         case LEFT_WALL_DETECTED:
           if (TopLeft < 100)
           {
-            reverse_right_blocking(5*motortime);
-            full_turn_right_blocking(5* motortime);
+            reverse_left(100*motortime);
           } else {
             forward_right(motortime);
           }
 
         case SLAB_WALL_DETECTED:
-          full_reverse_blocking(10 * motortime);
+          full_reverse(10 * motortime);
           reverseCount++;
           lastReverseTime = elapsed_time;
           if (reverseCount >= reverseThreshold) {
-            full_turn_right_blocking(200 * motortime);
+            full_turn_right(180 * motortime);
             reverseCount = 0;
             Serial.println("Stuck in a loop. Performing 180-degree turn.");
           }
           if (TopLeft > TopRight) {
-            full_turn_left_blocking(5 * motortime);
+            full_turn_left(20 * motortime);
           } else {
-            full_turn_right_blocking(5 * motortime);
+            full_turn_right(20 * motortime);
           }
           break;
 
         case RIGHT_WALL_DETECTED:
           if (TopRight < 100)
           {
-            reverse_left_blocking(5*motortime);
-            full_turn_left_blocking(5* motortime);
+            reverse_right(100*motortime);
           } else {
             forward_left(motortime);
           }
@@ -262,11 +258,11 @@ void Navigation(void) {
 
     case WEIGHT_DETECTED:
       if (TopMiddle < 200) {
-        full_reverse(5 * motortime);
+        full_reverse(20 * motortime);
         reverseCount++;
         lastReverseTime = elapsed_time;
         if (reverseCount >= reverseThreshold) {
-          full_turn_right_blocking(200 * motortime);
+          full_turn_right(180 * motortime);
           reverseCount = 0;
           Serial.println("Stuck in a loop. Performing 180-degree turn.");
         }
@@ -277,25 +273,23 @@ void Navigation(void) {
           full_turn_right(5 * motortime);
         }
       } else if (TopLeft < 100) {
-        full_reverse_blocking(5 * motortime);
-        full_turn_right_blocking(3 * motortime);
+        reverse_left(100*motortime);
       } else if (TopRight < 100) {
-        full_reverse_blocking(5 * motortime);
-        full_turn_left_blocking(3 * motortime);
+        reverse_right(100*motortime);
       } else {
         if (BottomLeft < 400 || BottomRight < 400) {
           if (BottomLeft > (BottomRight + 50)) {
-            full_turn_right_blocking(5 * motortime);
+            full_turn_right(5 * motortime);
           } else if (BottomRight > (BottomLeft + 50)) {
-            full_turn_left_blocking(5 * motortime);
+            full_turn_left(5 * motortime);
           } else {
             half_forward(motortime);
           }
         } else {
           if (BottomLeft > (BottomRight + 50)) {
-            forward_right(3 * motortime);
+            forward_right(10 * motortime);
           } else if (BottomRight > (BottomLeft + 50)) {
-            forward_left(3 * motortime);
+            forward_left(10 * motortime);
           } else {
             half_forward(motortime);
           }
@@ -306,9 +300,9 @@ void Navigation(void) {
     case WEIGHT_CONFIRMED:
       if (TopMiddle < 300) {
         if (TopLeft > TopRight) {
-          full_turn_left_blocking(5 * motortime);
+          full_turn_left(5 * motortime);
         } else {
-          full_turn_right_blocking(5 * motortime);
+          full_turn_right(5 * motortime);
         }
       } else {
         collect_weight = true;

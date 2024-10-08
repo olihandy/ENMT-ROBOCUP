@@ -33,6 +33,7 @@
 #include "ReturningHome.h"
 #include "DropWeights.h"
 
+extern bool actionInProgress;
 unsigned long start_time;
 unsigned long currentTime =0;
 extern int motortime;
@@ -77,7 +78,7 @@ WeightsCollectedState collectionState = ZERO;
 // Task period Definitions
 // ALL OF THESE VALUES WILL NEED TO BE SET TO SOMETHING USEFUL !!!!!!!!!!!!!!!!!!!!
 #define TOF_READ_TASK_PERIOD                70     //Takes 45 ms, 70 ms max
-#define READ_ELECTROMAGNET_TASK_PERIOD      50     // Takes 0 ms
+#define READ_ELECTROMAGNET_TASK_PERIOD      2     // Takes 0 ms
 #define READ_INDUCTIVE_TASK_PERIOD          50     // Takes 0 ms
 #define IMU_UPDATE_TASK_PERIOD              50       //Takes 2 ms
 #define WALL_UPDATE_TASK_PERIOD             50     //Takes 0ms
@@ -343,10 +344,17 @@ void loop() {
   static bool firstCollection = true;
 
   int currentTime = millis() / 1000 - start_time ;
-  // checkOrientation();
-  // int end_time = millis();
-  // Serial.println(end_time-start_time);
 
+  // int start_time2 = millis();
+  // GetInduction();
+  // int end_time = millis();
+  // Serial.println(end_time-start_time2);
+
+  if(actionInProgress) {
+    tNavigation.disable();
+  } else {
+    tNavigation.enable();
+  }
 
   if (runProgram) {
     Serial.println(currentTime);
@@ -435,13 +443,18 @@ void loop() {
 
       case FINISHED:
       if(currentTime < 110) {
+        tDrop_Weights.disable();
         NumWeightsCollected = 0;
         full_reverse_blocking(15*motortime);
         full_turn_left_blocking(15*motortime);
+        firstCollection = true;
+        collectionStartTime = 0;
         currentState = DRIVING;
-      }
+        break;
+      } else {
         stopAllActions();
         break;
+      }
     }
     taskManager.execute();
   } else {

@@ -56,20 +56,34 @@ void setupActuators() {
 //--------------------------------------------- Motors ---------------------------------------------------//
 //--------------------------------------------------------------------------------------------------------//
 
-unsigned long previousMillis = 0; // Stores the last time an action was performed
-unsigned long interval;       // Time to wait between steps
-
+unsigned long actionStartTime = 0;
+unsigned long actionDuration = 0;
+bool actionInProgress = false;
+int currentSpeedA = 1500;  // Default neutral position for servos
+int currentSpeedB = 1500;
 
 void nonBlockingMotorAction(unsigned long interval, int speedA, int speedB) {
   unsigned long currentMillis = millis(); // Get the current time
 
-  if (currentMillis - previousMillis >= interval) { // Check if the interval has passed
-    previousMillis = currentMillis; // Update the last action time
-    // Perform action based on current motor state
-    myservoA.writeMicroseconds(speedA);
-    myservoB.writeMicroseconds(speedB);
+  // Start a new action only if no action is currently in progress
+  if (!actionInProgress) {
+    actionStartTime = currentMillis;    // Record the start time
+    actionDuration = interval;          // Set the duration of the action
+    currentSpeedA = speedA;             // Set speed for motor A
+    currentSpeedB = speedB;             // Set speed for motor B
+    actionInProgress = true;            // Mark action as in progress
+
+    myservoA.writeMicroseconds(currentSpeedA); // Start motor A
+    myservoB.writeMicroseconds(currentSpeedB); // Start motor B
+  }
+
+  // If an action is in progress, check if the interval has passed
+  if (actionInProgress && (currentMillis - actionStartTime >= actionDuration)) {
+    // Stop the motors after the interval is complete
+    actionInProgress = false;          // Mark action as finished
   }
 }
+
 
 void full_reverse(int timedelay) {
   nonBlockingMotorAction(timedelay, full_reverse_speed, full_reverse_speed);
@@ -81,7 +95,7 @@ void full_reverse_blocking(int timedelay) {
   delay(timedelay);  
 }
 
-void reverse_left(int timedelay) {
+void reverse_left(int timedelay) {    //Brings back more left
   nonBlockingMotorAction(timedelay, half_reverse_speed, full_reverse_speed);
 }
 

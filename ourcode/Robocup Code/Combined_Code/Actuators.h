@@ -10,6 +10,8 @@
 extern int stepper_motor_fast;
 extern int stepper_motor_slow;
 extern int motortime;
+extern bool actionInProgress;
+
 
 // Electromagnet setup
 extern int FrontElectromagnetPin;
