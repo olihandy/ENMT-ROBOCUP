@@ -358,7 +358,7 @@ void loop() {
 
   if (runProgram) {
     // Serial.println(currentTime);
-    if ((currentTime > 100) && (NumWeightsCollected > 1)) {
+    if ((currentTime > 90) && (NumWeightsCollected >= 1)) {
       TimeToGo = true;
     }
 

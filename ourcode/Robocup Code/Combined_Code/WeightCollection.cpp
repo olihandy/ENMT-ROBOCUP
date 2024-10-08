@@ -20,8 +20,10 @@ void CollectWeight_1(void) {
 
 void CollectWeight_2(void) {
   stop_blocking(motortime);
+  full_reverse_blocking(30*motortime);
+  stop_blocking(motortime);
   big_step_down(stepper_motor_fast);
-  half_forward_blocking(120 * motortime);
+  half_forward_blocking(150 * motortime);
   stop_blocking(motortime);
   little_step_down(stepper_motor_fast);
   turn_on_electromagnet(2);
@@ -33,8 +35,10 @@ void CollectWeight_2(void) {
 
 void CollectWeight_3(void) {
   stop_blocking(motortime);
+  full_reverse_blocking(40*motortime);
+  stop_blocking(motortime);
   big_step_down(stepper_motor_slow);
-  half_forward_blocking(80 * motortime);
+  half_forward_blocking(150 * motortime);
   stop_blocking(motortime);
   little_step_down(stepper_motor_slow);
   turn_on_electromagnet(3);
