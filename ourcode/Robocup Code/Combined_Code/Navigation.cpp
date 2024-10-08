@@ -12,6 +12,7 @@ const int reverseThreshold = 5;        // Number of times robot can reverse befo
 unsigned long lastReverseTime = 0;     // Time when the last reverse happened
 const unsigned long reverseTimeout = 10000; // 10 seconds timeout to reset the reverse count
 
+extern bool actionInProgress;
 extern unsigned long elapsed_time;
 bool ReadyToDrive = false;
 bool WeightDetected = false;
@@ -186,8 +187,6 @@ void Navigation(void) {
   BottomLeft = averagedTOFreadings[5];
   BottomRight = averagedTOFreadings[6];
 
-  forward_right(motortime);
-  Serial.println("FORWARD LEFT");
   // Check if enough time has passed since the last reverse to reset the counter
   if (elapsed_time - lastReverseTime > reverseTimeout) {
     reverseCount = 0;  // Reset reverse count after timeout
@@ -220,13 +219,14 @@ void Navigation(void) {
 
         case LEFT_WALL_DETECTED:
           if (TopLeft < 100) {
-            Serial.println("BACKINGUP LEFT");
+            Serial.println("BACKINGUP RIGHT");
             reverse_left(20*motortime);
           } else {
             forward_right(motortime);
-            Serial.println("FORWARD LEFT");
+            Serial.println("FORWARD RIGHT");
 
           }
+          break;
 
         case SLAB_WALL_DETECTED:
           full_reverse(10 * motortime);
