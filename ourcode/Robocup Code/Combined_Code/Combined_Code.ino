@@ -77,22 +77,22 @@ WeightsCollectedState collectionState = ZERO;
 
 // Task period Definitions
 // ALL OF THESE VALUES WILL NEED TO BE SET TO SOMETHING USEFUL !!!!!!!!!!!!!!!!!!!!
-#define TOF_READ_TASK_PERIOD                20     //Takes 14 ms
-#define READ_ELECTROMAGNET_TASK_PERIOD      10     // Takes 0 ms
+#define TOF_READ_TASK_PERIOD                40     //Takes 14 ms
+#define READ_ELECTROMAGNET_TASK_PERIOD      2     // Takes 0 ms
 #define READ_INDUCTIVE_TASK_PERIOD          10     // Takes 0 ms
 #define IMU_UPDATE_TASK_PERIOD              50       //Takes 2 ms
-#define WALL_UPDATE_TASK_PERIOD             20     //Takes 0ms
-#define WEIGHT_UPDATE_TASK_PERIOD           20     //Takes 0ms?
+#define WALL_UPDATE_TASK_PERIOD             50     //Takes 0ms
+#define WEIGHT_UPDATE_TASK_PERIOD           50     //Takes 0ms?
 #define CHECK_ORIENTATION_TASK_PERIOD       50     //Takes 0ms?
 #define CHECK_SENSOR_UPDATES_TASK_PERIOD    50     //Takes 0ms?
 #define NAVIGATION_TASK_PERIOD              50    //Takes 100 ms?
 #define PRINT_IMU_TASK_PERIOD               500       //Takes 0ms?
-#define PRINT_INFORMATION_TASK_PERIOD       200     //Takes 130 ms
-#define PRINT_STATES_TASK_PERIOD            200     //Takes 0 ms? 
-#define COLLECT_WEIGHT_1_TASK_PERIOD        1000
-#define COLLECT_WEIGHT_2_TASK_PERIOD        1000
-#define COLLECT_WEIGHT_3_TASK_PERIOD        1000
-#define RETURN_HOME_TASK_PERIOD             50
+#define PRINT_INFORMATION_TASK_PERIOD       500     //Takes 130 ms
+#define PRINT_STATES_TASK_PERIOD            500     //Takes 0 ms? 
+#define COLLECT_WEIGHT_1_TASK_PERIOD        500
+#define COLLECT_WEIGHT_2_TASK_PERIOD        500
+#define COLLECT_WEIGHT_3_TASK_PERIOD        500
+#define RETURN_HOME_TASK_PERIOD             100
 #define COLOUR_COMPARE_TASK_PERIOD          50
 #define COLOUR_START_TASK_PERIOD            50
 #define DROP_WEIGHTS_TASK_PERIOD            1000
@@ -118,7 +118,6 @@ WeightsCollectedState collectionState = ZERO;
 #define COLOUR_COMPARE_NUM_EXECTUTE            -1
 #define COLOUR_START_NUM_EXECUTE               -1
 #define DROP_WEIGHTS_NUM_EXECUTE               -1
-
 
 
 // Pin deffinitions
@@ -237,7 +236,7 @@ void startingActions() {
   tCheck_orientation.enable();
   tCheck_sensor_updates.enable();
   tNavigation.disable();
-  tIMU_print.disable();
+  tIMU_print.enable();
   tPrint_information.enable();
   tPrint_states.enable();
   tCollect_weight_1.disable();
@@ -254,13 +253,11 @@ void startingActions() {
 void drivingActions() {
   tNavigation.enable();
   tColour_start.disable();
-  tIMU_print.disable();
-  tPrint_information.disable();
-  tPrint_states.disable();  
 }
 
 
 void returningHomeActions() {
+  stop_blocking(10);
   tNavigation.disable();
   tUpdate_wall_state.disable();
   tUpdate_weight_state.disable();
@@ -268,34 +265,12 @@ void returningHomeActions() {
   tColour_compare.enable();
   tColour_start.disable();
   tIMU_update.enable();
-  tIMU_print.disable();
+  tIMU_print.enable();
   tPrint_information.disable();
   tRead_TOF.enable();
   tCheck_orientation.disable();
   tDrop_Weights.disable();
   tPrint_states.disable();
-}
-
-void collectionActions() {
-  tRead_TOF.disable();
-  tRead_electromagnet.disable();
-  tRead_inductive.enable();
-  tIMU_update.enable();
-  tUpdate_wall_state.disable();
-  tUpdate_weight_state.enable();
-  tCheck_orientation.disable();
-  tCheck_sensor_updates.disable();
-  tNavigation.disable();
-  tIMU_print.disable();
-  tPrint_information.enable();
-  tPrint_states.disable();
-  tCollect_weight_1.disable();
-  tCollect_weight_2.disable();
-  tCollect_weight_3.disable();
-  tReturn_home.disable();
-  tColour_compare.disable();  
-  tColour_start.disable();
-  tDrop_Weights.disable(); 
 }
 //**********************************************************************************
 // Initialise the tasks for the scheduler
@@ -370,7 +345,7 @@ void loop() {
   int currentTime = millis() / 1000 - start_time ;
 
   // int start_time2 = millis();
-  // GetTOF();
+  // GetInduction();
   // int end_time = millis();
   // Serial.println(end_time-start_time2);
 
@@ -382,7 +357,7 @@ void loop() {
 
   if (runProgram) {
     // Serial.println(currentTime);
-    if (currentTime >90 ||NumWeightsCollected == 3) {
+    if (currentTime > 100) {
       TimeToGo = true;
     }
 
@@ -398,7 +373,6 @@ void loop() {
       case DRIVING:
       drivingActions();
         if (TimeToGo || NumWeightsCollected == 3) {
-          TimeToGo = true;
           currentState = RETURNING_HOME;
         }
         if (collect_weight) {
@@ -407,7 +381,8 @@ void loop() {
         break;
 
       case COLLECTING_WEIGHT:
-      collectionActions();
+
+        // Check if enough time has passed since the last collection or for the first collection
         if (firstCollection || (millis() - collectionStartTime >= collectionDelay)) {
           firstCollection = false;  // Reset the first collection flag
           switch (collectionState) {
@@ -469,7 +444,8 @@ void loop() {
       if(currentTime < 110) {
         tDrop_Weights.disable();
         NumWeightsCollected = 0;
-        reverseThenTurnLeft(motortime*15, motortime*15);
+        full_reverse_blocking(15*motortime);
+        full_turn_left_blocking(15*motortime);
         firstCollection = true;
         collectionStartTime = 0;
         currentState = DRIVING;

@@ -168,7 +168,6 @@ void UpdateWeightState(void) {
     }
     return;  // Skip other checks while in WEIGHT_CONFIRMED
   }
-
   // Handle other states
   if (FrontInduction) {
     if (weightState != WEIGHT_CONFIRMED) {
@@ -177,13 +176,18 @@ void UpdateWeightState(void) {
       Serial.println("Weight confirmed.");
     }
   } else if (weightState != WEIGHT_CONFIRMED) {
-    if (((MiddleRight > (BottomRight + 400))) ^ (MiddleLeft > (BottomLeft + 400))) {
+    if (((MiddleRight - BottomRight) > 200) && (TopRight > 400)) {
+      weightState = WEIGHT_DETECTED;
+  } else if (weightState != WEIGHT_CONFIRMED) {
+    if ( ((MiddleLeft - BottomLeft) > 200) && (TopLeft > 400)) {
       weightState = WEIGHT_DETECTED;
     } else {
       weightState = WEIGHT_NOT_DETECTED;
     }
   }
 }
+}
+
 
 
 
@@ -276,7 +280,7 @@ void Navigation(void) {
 
     case WEIGHT_DETECTED:
 
-      if (TopMiddle < 200) {
+      if (TopMiddle < 300) {
         full_reverse(5 * motortime);
         reverseCount++;
         lastReverseTime = elapsed_time;
