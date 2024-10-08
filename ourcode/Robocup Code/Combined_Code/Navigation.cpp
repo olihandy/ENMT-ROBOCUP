@@ -160,7 +160,7 @@ void UpdateWeightState(void) {
       weightState = WEIGHT_CONFIRMED;
     }
   } else if (weightState != WEIGHT_CONFIRMED) {
-    if (((MiddleRight > (BottomRight + 200))) || (MiddleLeft > (BottomLeft + 200))) {
+    if (((MiddleRight > (BottomRight + 200))) ^ (MiddleLeft > (BottomLeft + 200))) {
       weightState = WEIGHT_DETECTED;
     } else {
       weightState = WEIGHT_NOT_DETECTED;
