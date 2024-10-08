@@ -58,6 +58,9 @@ void return_home(void) {
       }
 
       case FOLLOW_WALL: {
+        if(Left > 500 && Right > 500) {
+          currentWallState = NO_WALL_REORIENT;
+        }
         if (FoundWall == 1) {  // Right wall
           if (Right > 350) {  // Too far from the right wall
             forward_right(motortime);  // Turn slightly towards the wall
@@ -69,7 +72,7 @@ void return_home(void) {
 
           // Obstacle detected in front
           if (Middle < 300) {
-            full_turn_left_blocking(10 * motortime);  // Turn left 90 degrees to avoid obstacle
+            full_turn_left(10 * motortime);  // Turn left 90 degrees to avoid obstacle
           }
 
         } else if (FoundWall == 2) {  // Left wall
@@ -84,7 +87,7 @@ void return_home(void) {
 
           // Obstacle detected in front
           if (Middle < 300) {
-            full_turn_right_blocking(10 * motortime);  // Turn right 90 degrees to avoid obstacle
+            full_turn_right(10 * motortime);  // Turn right 90 degrees to avoid obstacle
           }
 
         } else if (FoundWall == 3) {  // No wall detected

@@ -48,6 +48,11 @@ void full_turn_left_blocking(int timedelay);
 void forward_left(int timedelay);
 void forward_left_left(int timedelay);
 
+void sequentialNonBlockingMotorAction(unsigned long interval1, int speedA1, int speedB1, unsigned long interval2, int speedA2, int speedB2);
+void reverseThenTurnLeft(unsigned long interval1, unsigned long interval2);
+void reverseThenTurnRight(unsigned long interval1, unsigned long interval2);
+
+
 
 // Stepper motor functions now include speed parameter
 void go_down(int speed);            // Descend using speed instead of delay

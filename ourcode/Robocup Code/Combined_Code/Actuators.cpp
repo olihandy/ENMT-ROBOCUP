@@ -84,6 +84,51 @@ void nonBlockingMotorAction(unsigned long interval, int speedA, int speedB) {
   }
 }
 
+unsigned long action1StartTime = 0;
+unsigned long action2StartTime = 0;
+unsigned long action1Duration = 0;
+unsigned long action2Duration = 0;
+bool action1InProgress = false;
+bool action2InProgress = false;
+
+void sequentialNonBlockingMotorAction(unsigned long interval1, int speedA1, int speedB1, unsigned long interval2, int speedA2, int speedB2) {
+  unsigned long currentMillis = millis();
+
+  // Start the first action if it hasn't started
+  if (!action1InProgress && !action2InProgress) {
+    action1StartTime = currentMillis;
+    action1Duration = interval1;
+    myservoA.writeMicroseconds(speedA1);
+    myservoB.writeMicroseconds(speedB1);
+    action1InProgress = true;
+  }
+
+  // Check if the first action is completed
+  if (action1InProgress && (currentMillis - action1StartTime >= action1Duration)) {
+    // Start the second action
+    action2StartTime = currentMillis;
+    action2Duration = interval2;
+    myservoA.writeMicroseconds(speedA2);
+    myservoB.writeMicroseconds(speedB2);
+    action1InProgress = false; // First action finished
+    action2InProgress = true;  // Second action starts
+  }
+
+  // Check if the second action is completed
+  if (action2InProgress && (currentMillis - action2StartTime >= action2Duration)) {
+    action2InProgress = false; // Second action finished
+  }
+}
+
+void reverseThenTurnLeft(unsigned long interval1, unsigned long interval2) {
+  sequentialNonBlockingMotorAction(interval1, full_reverse_speed, full_reverse_speed, 
+                                   interval1, full_forward_speed, full_reverse_speed);
+}
+
+void reverseThenTurnRight(unsigned long interval1, unsigned long interval2) {
+  sequentialNonBlockingMotorAction(interval1, full_reverse_speed, full_reverse_speed, 
+                                   interval1, full_reverse_speed, full_forward_speed);  
+}
 
 void full_reverse(int timedelay) {
   nonBlockingMotorAction(timedelay, full_reverse_speed, full_reverse_speed);

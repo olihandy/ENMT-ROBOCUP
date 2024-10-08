@@ -8,7 +8,7 @@ int NumWeightsCollected = 0;
 void CollectWeight_1(void) {
   half_forward(motortime);
   if (!digitalRead(BackInductionPin)) {
-    half_forward_blocking(7*motortime);
+    half_forward_blocking(3*motortime);
     stop_blocking(motortime);
     go_down(stepper_motor_fast);
     turn_on_electromagnet(1);
@@ -21,7 +21,7 @@ void CollectWeight_1(void) {
 void CollectWeight_2(void) {
   stop_blocking(motortime);
   big_step_down(stepper_motor_fast);
-  half_forward_blocking(15 * motortime);
+  half_forward_blocking(10 * motortime);
   stop_blocking(motortime);
   little_step_down(stepper_motor_fast);
   turn_on_electromagnet(2);

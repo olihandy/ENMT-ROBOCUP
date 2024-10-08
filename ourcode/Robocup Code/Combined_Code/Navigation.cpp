@@ -24,9 +24,8 @@ extern int NumWeightsCollected;
 extern bool finished_collecting;
 int LengthOfRobot = 350;
 int five_seconds = 5000;
-int ten_seconds = 10000;
+int fifteen_seconds = 15000;
 int NOCHANGETHRESHOLD = 5;
-int timeWeightDetected;
 unsigned long lastOrientationChangeTime = 0;
 float lastOrientation = 0;
 
@@ -107,7 +106,7 @@ void checkOrientation(void) {
   }
 
   // If the robot has been facing the same direction for too long
-  if ((millis() - lastOrientationChangeTime) > ten_seconds) {
+  if ((millis() - lastOrientationChangeTime) > fifteen_seconds) {
     // Time to turn around
     full_turn_left(100*motortime);
     Serial.println("No direction change detected, turning");
@@ -161,16 +160,13 @@ void UpdateWeightState(void) {
       weightState = WEIGHT_CONFIRMED;
     }
   } else if (weightState != WEIGHT_CONFIRMED) {
-    if (((MiddleRight > (BottomRight + 100)) && (TopRight > (MiddleRight + 150))) || ((MiddleLeft > (BottomLeft + 100)) && (TopLeft > (MiddleLeft + 150)))) {
-      timeWeightDetected = millis();
+    if (((MiddleRight > (BottomRight + 200))) || (MiddleLeft > (BottomLeft + 200))) {
       weightState = WEIGHT_DETECTED;
     } else {
       weightState = WEIGHT_NOT_DETECTED;
     }
   }
-  // if((millis() - timeWeightDetected) > timeoutDuration) {
-  //   weightState = WEIGHT_NOT_DETECTED;
-  // }
+
 }
 
 
@@ -218,9 +214,9 @@ void Navigation(void) {
           break;
 
         case LEFT_WALL_DETECTED:
-          if (TopLeft < 100) {
+          if (TopLeft < 150) {
             Serial.println("BACKINGUP RIGHT");
-            reverse_left(20*motortime);
+            reverse_right(20*motortime);
           } else {
             forward_right(motortime);
             Serial.println("FORWARD RIGHT");
@@ -229,7 +225,11 @@ void Navigation(void) {
           break;
 
         case SLAB_WALL_DETECTED:
-          full_reverse(10 * motortime);
+          if(TopLeft > TopRight) {
+            reverseThenTurnLeft(10*motortime,10*motortime);
+          } else {
+            reverseThenTurnRight(10*motortime,10*motortime);
+          }
           reverseCount++;
           lastReverseTime = elapsed_time;
           if (reverseCount >= reverseThreshold) {
@@ -245,9 +245,9 @@ void Navigation(void) {
           break;
 
         case RIGHT_WALL_DETECTED:
-          if (TopRight < 100) {
+          if (TopRight < 150) {
             Serial.println("BACKINGUP RIGHT");
-            reverse_right(20*motortime);
+            reverse_left(20*motortime);
           } else {
             forward_left(motortime);
             Serial.println("FORWARD RIGHT");
@@ -262,43 +262,48 @@ void Navigation(void) {
       }
       break;
 
+
     case WEIGHT_DETECTED:
+
       if (TopMiddle < 200) {
+        full_reverse(5 * motortime);
         reverseCount++;
         lastReverseTime = elapsed_time;
         if (reverseCount >= reverseThreshold) {
           full_turn_right(180 * motortime);
           reverseCount = 0;
           Serial.println("Stuck in a loop. Performing 180-degree turn.");
-
+        }
         if (TopLeft > TopRight) {
-          full_turn_left(20 * motortime);
+          full_turn_left(5 * motortime);
         } else {
-          full_turn_right(20 * motortime);
+          full_turn_right(5 * motortime);
         }
       } else if (TopLeft < 100) {
-        reverse_left(100*motortime);
+        reverseThenTurnLeft(5*motortime, 3*motortime);
       } else if (TopRight < 100) {
-        reverse_right(100*motortime);
+        reverseThenTurnRight(5*motortime, 3*motortime);
       } else {
+        
         if (BottomLeft < 400 || BottomRight < 400) {
           if (BottomLeft > (BottomRight + 50)) {
-            full_turn_right(5 * motortime);
+            full_turn_right(2 * motortime);
           } else if (BottomRight > (BottomLeft + 50)) {
-            full_turn_left(5 * motortime);
+            full_turn_left(2 * motortime);
           } else {
             half_forward(motortime);
           }
         } else {
           if (BottomLeft > (BottomRight + 50)) {
-            forward_right(10 * motortime);
+            forward_right(2 * motortime);
           } else if (BottomRight > (BottomLeft + 50)) {
-            forward_left(10 * motortime);
+            forward_left(2 * motortime);
           } else {
             half_forward(motortime);
           }
         }
       }
+
       break;
 
     case WEIGHT_CONFIRMED:
@@ -314,7 +319,6 @@ void Navigation(void) {
       }
       break;
   }
-}
 }
 
 

@@ -77,9 +77,9 @@ WeightsCollectedState collectionState = ZERO;
 
 // Task period Definitions
 // ALL OF THESE VALUES WILL NEED TO BE SET TO SOMETHING USEFUL !!!!!!!!!!!!!!!!!!!!
-#define TOF_READ_TASK_PERIOD                70     //Takes 45 ms, 70 ms max
-#define READ_ELECTROMAGNET_TASK_PERIOD      2     // Takes 0 ms
-#define READ_INDUCTIVE_TASK_PERIOD          50     // Takes 0 ms
+#define TOF_READ_TASK_PERIOD                20     //Takes 14 ms
+#define READ_ELECTROMAGNET_TASK_PERIOD      10     // Takes 0 ms
+#define READ_INDUCTIVE_TASK_PERIOD          10     // Takes 0 ms
 #define IMU_UPDATE_TASK_PERIOD              50       //Takes 2 ms
 #define WALL_UPDATE_TASK_PERIOD             50     //Takes 0ms
 #define WEIGHT_UPDATE_TASK_PERIOD           50     //Takes 0ms?
@@ -92,7 +92,7 @@ WeightsCollectedState collectionState = ZERO;
 #define COLLECT_WEIGHT_1_TASK_PERIOD        500
 #define COLLECT_WEIGHT_2_TASK_PERIOD        500
 #define COLLECT_WEIGHT_3_TASK_PERIOD        500
-#define RETURN_HOME_TASK_PERIOD             500
+#define RETURN_HOME_TASK_PERIOD             50
 #define COLOUR_COMPARE_TASK_PERIOD          50
 #define COLOUR_START_TASK_PERIOD            50
 #define DROP_WEIGHTS_TASK_PERIOD            1000
@@ -258,7 +258,6 @@ void drivingActions() {
 
 
 void returningHomeActions() {
-  stop_blocking(10);
   tNavigation.disable();
   tUpdate_wall_state.disable();
   tUpdate_weight_state.disable();
@@ -346,7 +345,7 @@ void loop() {
   int currentTime = millis() / 1000 - start_time ;
 
   // int start_time2 = millis();
-  // GetInduction();
+  // GetTOF();
   // int end_time = millis();
   // Serial.println(end_time-start_time2);
 
@@ -358,7 +357,7 @@ void loop() {
 
   if (runProgram) {
     // Serial.println(currentTime);
-    if (currentTime > 100) {
+    if (currentTime >100 ||NumWeightsCollected == 3) {
       TimeToGo = true;
     }
 
@@ -374,6 +373,7 @@ void loop() {
       case DRIVING:
       drivingActions();
         if (TimeToGo || NumWeightsCollected == 3) {
+          TimeToGo = true;
           currentState = RETURNING_HOME;
         }
         if (collect_weight) {
@@ -445,8 +445,7 @@ void loop() {
       if(currentTime < 110) {
         tDrop_Weights.disable();
         NumWeightsCollected = 0;
-        full_reverse_blocking(15*motortime);
-        full_turn_left_blocking(15*motortime);
+        reverseThenTurnLeft(motortime*15, motortime*15);
         firstCollection = true;
         collectionStartTime = 0;
         currentState = DRIVING;
