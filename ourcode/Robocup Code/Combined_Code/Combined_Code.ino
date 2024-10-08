@@ -92,7 +92,7 @@ WeightsCollectedState collectionState = ZERO;
 #define COLLECT_WEIGHT_1_TASK_PERIOD        500
 #define COLLECT_WEIGHT_2_TASK_PERIOD        500
 #define COLLECT_WEIGHT_3_TASK_PERIOD        500
-#define RETURN_HOME_TASK_PERIOD             100
+#define RETURN_HOME_TASK_PERIOD             50
 #define COLOUR_COMPARE_TASK_PERIOD          50
 #define COLOUR_START_TASK_PERIOD            50
 #define DROP_WEIGHTS_TASK_PERIOD            1000
@@ -236,9 +236,9 @@ void startingActions() {
   tCheck_orientation.enable();
   tCheck_sensor_updates.enable();
   tNavigation.disable();
-  tIMU_print.enable();
-  tPrint_information.enable();
-  tPrint_states.enable();
+  tIMU_print.disable();
+  tPrint_information.disable();
+  tPrint_states.disgiable();
   tCollect_weight_1.disable();
   tCollect_weight_2.disable();
   tCollect_weight_3.disable();
@@ -251,8 +251,10 @@ void startingActions() {
 }
 
 void drivingActions() {
+  tDrop_Weights.disable();
   tNavigation.enable();
   tColour_start.disable();
+  tColour_compare.enable();
 }
 
 
@@ -265,7 +267,7 @@ void returningHomeActions() {
   tColour_compare.enable();
   tColour_start.disable();
   tIMU_update.enable();
-  tIMU_print.enable();
+  tIMU_print.disable();
   tPrint_information.disable();
   tRead_TOF.enable();
   tCheck_orientation.disable();
@@ -357,7 +359,7 @@ void loop() {
 
   if (runProgram) {
     // Serial.println(currentTime);
-    if (currentTime > 100) {
+    if ((currentTime > 100) && (NumWeightsCollected > 1)) {
       TimeToGo = true;
     }
 
@@ -372,6 +374,10 @@ void loop() {
 
       case DRIVING:
       drivingActions();
+        if (ColorCompareHome() && (NumWeightsCollected > 1)) {
+          tNavigation.disable();
+          tDrop_Weights.enable();
+        }
         if (TimeToGo || NumWeightsCollected == 3) {
           currentState = RETURNING_HOME;
         }
