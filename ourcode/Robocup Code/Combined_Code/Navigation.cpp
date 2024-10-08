@@ -12,7 +12,7 @@ const int reverseThreshold = 5;        // Number of times robot can reverse befo
 unsigned long lastReverseTime = 0;     // Time when the last reverse happened
 const unsigned long reverseTimeout = 10000; // 10 seconds timeout to reset the reverse count
 
-
+extern unsigned long elapsed_time;
 bool ReadyToDrive = false;
 bool WeightDetected = false;
 bool TimeToGo = false;
@@ -77,13 +77,12 @@ void CheckForSensorUpdates() {
   }
   // Track time for sensor change timeout
   static unsigned long lastChangeTime = millis();
-  unsigned long currentTime = millis();
   // Update last change time if any sensor changes are detected
   if (sensorChanged) {
-    lastChangeTime = currentTime;
+    lastChangeTime = elapsed_time;
   }
   // If no sensor changes detected for the timeout duration, perform reverse navigation
-  if ((currentTime - lastChangeTime) > timeoutDuration) {
+  if ((elapsed_time - lastChangeTime) > timeoutDuration) {
     Serial.println("No sensor change detected for timeout duration. Executing reverse navigation.");
     full_reverse_blocking(10 * motortime);    // Perform reverse
     full_turn_left_blocking(100 * motortime); // Perform turn
@@ -190,10 +189,9 @@ void Navigation(void) {
   BottomRight = averagedTOFreadings[6];
   BackInduction = !digitalRead(BackInductionPin);  
 
-  unsigned long currentTime = millis();
 
   // Check if enough time has passed since the last reverse to reset the counter
-  if (currentTime - lastReverseTime > reverseTimeout) {
+  if (elapsed_time - lastReverseTime > reverseTimeout) {
     reverseCount = 0;  // Reset reverse count after timeout
   }
 
@@ -204,7 +202,7 @@ void Navigation(void) {
         case WALL_AHEAD:
           full_reverse(motortime);
           reverseCount++;  // Increment reverse counter
-          lastReverseTime = currentTime;  // Update the last reverse time
+          lastReverseTime = elapsed_time;  // Update the last reverse time
 
           // If the robot has reversed too many times, perform a 180-degree turn
           if (reverseCount >= reverseThreshold) {
@@ -228,9 +226,9 @@ void Navigation(void) {
           }
 
         case SLAB_WALL_DETECTED:
-          full_reverse(10 * motortime);
+          full_reverse_blocking(10 * motortime);
           reverseCount++;
-          lastReverseTime = currentTime;
+          lastReverseTime = elapsed_time;
           if (reverseCount >= reverseThreshold) {
             full_turn_right_blocking(200 * motortime);
             reverseCount = 0;
@@ -266,7 +264,7 @@ void Navigation(void) {
       if (TopMiddle < 200) {
         full_reverse(5 * motortime);
         reverseCount++;
-        lastReverseTime = currentTime;
+        lastReverseTime = elapsed_time;
         if (reverseCount >= reverseThreshold) {
           full_turn_right_blocking(200 * motortime);
           reverseCount = 0;

@@ -33,12 +33,15 @@
 #include "ReturningHome.h"
 #include "DropWeights.h"
 
+unsigned long start_time;
+unsigned long currentTime =0;
 extern int motortime;
 bool runProgram = true;
 extern bool ReadyToDrive;
 extern bool WeightDetected;
 extern int NumWeightsCollected;
 extern bool TimeToGo;
+extern float GoTime;
 extern bool homeReached;
 extern bool collect_weight;
 extern bool electromagnetStates[3];         // State of electromagnets
@@ -178,14 +181,14 @@ void setup() {
   Serial.begin(BAUD_RATE);
   pin_init();
   setupActuators();
-  setup_IMU();
   setupSensors();
-  // int_init();
-  task_init();
+  setup_IMU();
   Serial.println("System Initialised");
   while(!digitalRead(STARTBUT)) {
+    start_time = millis() / 1000;
     delay(1);
   }
+  task_init();
 }
 
 //**********************************************************************************
@@ -200,14 +203,6 @@ void pin_init(){
 
 }
 
-
-// void toggle_prog_ISR() {
-//   runProgram = !runProgram;
-// }
-
-// void int_init() {
-//   attachInterrupt(digitalPinToInterrupt(STARTBUT), toggle_prog_ISR, FALLING);
-// }
 
 void stopAllActions() {
   tRead_TOF.disable();
@@ -250,7 +245,8 @@ void startingActions() {
   tReturn_home.disable();
   tColour_compare.enable();
   tColour_start.enable();
-  tDrop_Weights.disable();  
+  tDrop_Weights.disable();
+  
 
 }
 
@@ -275,8 +271,6 @@ void returningHomeActions() {
   tCheck_orientation.disable();
   tDrop_Weights.disable();
   tPrint_states.disable();
-
-
 }
 //**********************************************************************************
 // Initialise the tasks for the scheduler
@@ -328,6 +322,7 @@ void task_init() {
   tColour_start.enable();
   tDrop_Weights.enable();
 
+
   Serial.println("Tasks have been initialised \n");
 }
 
@@ -347,14 +342,14 @@ void loop() {
   const unsigned long collectionDelay = 100;
   static bool firstCollection = true;
 
-  // int start_time = millis();
+  int currentTime = millis() / 1000 - start_time ;
   // checkOrientation();
   // int end_time = millis();
   // Serial.println(end_time-start_time);
 
 
   if (runProgram) {
-    int currentTime = millis() / 1000;
+    Serial.println(currentTime);
     if (currentTime > 100) {
       TimeToGo = true;
     }

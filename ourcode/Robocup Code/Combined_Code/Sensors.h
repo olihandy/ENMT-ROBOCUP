@@ -13,7 +13,7 @@
 #include <Adafruit_TCS34725.h>
 
 // Global variables for time tracking
-extern int elapsed_time;                   // Time elapsed since start
+extern unsigned long elapsed_time;                   // Time elapsed since start
 extern unsigned long lastChangeTime;       // Timestamp of the last change
 extern const unsigned long timeoutDuration; // Duration for timeouts (e.g., 5 seconds)
 

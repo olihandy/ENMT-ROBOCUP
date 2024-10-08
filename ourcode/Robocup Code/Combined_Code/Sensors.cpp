@@ -17,7 +17,7 @@ circBuf_t TOFbuffer6;
 
 uint16_t averagedTOFreadings[numReadings];
 
-int elapsed_time = 0;
+unsigned long elapsed_time = 0;
 unsigned long lastChangeTime = 0; // Timestamp of the last change
 const unsigned long timeoutDuration = 5000; // 2 seconds
 
@@ -231,7 +231,6 @@ void GetInduction(void) {
 }
 
 void PrintInformation() {
-    elapsed_time = millis() / 1000;
     if (ColorCompareHome()) {
       Serial.println("Color matches the starting color.");
     } else {
